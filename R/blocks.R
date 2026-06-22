@@ -13,8 +13,27 @@ make_block <- function(coords,
   cblocks <- match.arg(cblocks)
 
   nblocks <- as.integer(nblocks)
+
   if (length(nblocks) != 1L || nblocks < 1L) {
     stop("nblocks must be a positive integer.", call. = FALSE)
+  }
+
+  coords <- as.matrix(coords)
+
+  if (!is.numeric(coords)) {
+    stop("coords must be numeric.", call. = FALSE)
+  }
+
+  if (nrow(coords) < 1L) {
+    stop("coords must contain at least one row.", call. = FALSE)
+  }
+
+  if (ncol(coords) < 2L) {
+    stop("coords must have at least two columns.", call. = FALSE)
+  }
+
+  if (any(!is.finite(coords))) {
+    stop("coords contains non-finite values.", call. = FALSE)
   }
 
   n <- nrow(coords)
@@ -25,18 +44,26 @@ make_block <- function(coords,
 
   if (cblocks == "kmeans") {
 
+    if (n < nblocks) {
+      stop("nblocks cannot be larger than the number of observations for kmeans.",
+           call. = FALSE)
+    }
+
     if (n < 5e4) {
+
       category <- stats::kmeans(
         coords,
         centers = nblocks,
         algorithm = "Hartigan-Wong"
       )$cluster
+
     } else {
+
       m <- min(n, max(5000L, 20L * nblocks))
       sample_idx <- sample.int(n, size = m)
 
       init_km <- stats::kmeans(
-        coords[sample_idx, ],
+        coords[sample_idx, , drop = FALSE],
         centers = nblocks,
         nstart = 50,
         iter.max = 200,
@@ -45,45 +72,98 @@ make_block <- function(coords,
 
       category <- stats::kmeans(
         coords,
-        centers = init_km$centers[, 1:2],
+        centers = init_km$centers,
         algorithm = "Hartigan-Wong",
         nstart = 1,
         iter.max = 200
       )$cluster
     }
 
-    return(factor(category))
+    category <- pmin(pmax(as.integer(category), 1L), nblocks)
+
+    return(factor(category, levels = seq_len(nblocks)))
   }
 
   if (cblocks == "regular") {
 
-    n_side <- ceiling(sqrt(nblocks))
+    dims <- bp_regular_grid_dims(nblocks)
 
-    cutx <- seq(min(coords[,1]), max(coords[,1]), length.out = n_side + 1L)
-    cuty <- seq(min(coords[,2]), max(coords[,2]), length.out = n_side + 1L)
+    nx <- dims["nx"]
+    ny <- dims["ny"]
 
-    category <- interaction(
-      findInterval(coords[,1], cutx, rightmost.closed = TRUE),
-      findInterval(coords[,2], cuty, rightmost.closed = TRUE),
-      sep = "-"
+    cutx <- seq(
+      min(coords[, 1]),
+      max(coords[, 1]),
+      length.out = nx + 1L
     )
 
-    return(factor(category))
+    cuty <- seq(
+      min(coords[, 2]),
+      max(coords[, 2]),
+      length.out = ny + 1L
+    )
+
+    ix <- bp_find_bin(coords[, 1], cutx, nx)
+    iy <- bp_find_bin(coords[, 2], cuty, ny)
+
+    category <- (iy - 1L) * nx + ix
+
+    return(factor(category, levels = seq_len(nblocks)))
   }
 
   if (cblocks == "row") {
 
-    cuty <- seq(min(coords[,2]), max(coords[,2]), length.out = nblocks + 1L)
+    cuty <- seq(
+      min(coords[, 2]),
+      max(coords[, 2]),
+      length.out = nblocks + 1L
+    )
 
-    category <- findInterval(coords[,2], cuty, rightmost.closed = TRUE)
-    return(factor(category))
+    category <- bp_find_bin(coords[, 2], cuty, nblocks)
+
+    return(factor(category, levels = seq_len(nblocks)))
   }
 
   if (cblocks == "col") {
 
-    cutx <- seq(min(coords[,1]), max(coords[,1]), length.out = nblocks + 1L)
+    cutx <- seq(
+      min(coords[, 1]),
+      max(coords[, 1]),
+      length.out = nblocks + 1L
+    )
 
-    category <- findInterval(coords[,1], cutx, rightmost.closed = TRUE)
-    return(factor(category))
+    category <- bp_find_bin(coords[, 1], cutx, nblocks)
+
+    return(factor(category, levels = seq_len(nblocks)))
   }
+}
+
+bp_regular_grid_dims <- function(nblocks) {
+
+  nblocks <- as.integer(nblocks)
+
+  if (length(nblocks) != 1L || nblocks < 1L) {
+    stop("nblocks must be a positive integer.", call. = FALSE)
+  }
+
+  divs <- which(nblocks %% seq_len(nblocks) == 0L)
+
+  nx <- divs[which.min(abs(divs - sqrt(nblocks)))]
+  ny <- nblocks / nx
+
+  c(nx = as.integer(nx), ny = as.integer(ny))
+}
+
+bp_find_bin <- function(x, breaks, nbins) {
+
+  out <- findInterval(
+    x,
+    breaks,
+    rightmost.closed = TRUE,
+    all.inside = TRUE
+  )
+
+  out <- pmin(pmax(out, 1L), nbins)
+
+  as.integer(out)
 }
