@@ -1,0 +1,25 @@
+Package: blockpairwise
+Type: Package
+Title: Block Pairwise Composite Likelihood for Spatial Models
+Version: 0.1.0
+Authors@R: 
+    person("Bladimir", "Morales-Torrez",
+    email= "bvmorales@uc.cl", 
+    role = c("aut", "cre"))
+Description:
+    Estimation of spatial models using block pairwise composite likelihood.
+License: GPL-3
+Imports:
+    Rcpp,
+    stats,
+    nabor
+LinkingTo:
+    Rcpp,
+    RcppParallel,
+    BH
+Encoding: UTF-8
+LazyData: true
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Config/roxygen2/version: 8.0.0
