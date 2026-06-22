@@ -37,17 +37,26 @@ BEGIN_RCPP
 END_RCPP
 }
 // prepare_bcl_storage
-SEXP prepare_bcl_storage(Rcpp::List Z_list_R, Rcpp::List valid_pairs_list_R, Rcpp::List dist_pairs_list_R);
-RcppExport SEXP _blockpairwise_prepare_bcl_storage(SEXP Z_list_RSEXP, SEXP valid_pairs_list_RSEXP, SEXP dist_pairs_list_RSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type Z_list_R(Z_list_RSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type valid_pairs_list_R(valid_pairs_list_RSEXP);
-    Rcpp::traits::input_parameter< Rcpp::List >::type dist_pairs_list_R(dist_pairs_list_RSEXP);
-    rcpp_result_gen = Rcpp::wrap(prepare_bcl_storage(Z_list_R, valid_pairs_list_R, dist_pairs_list_R));
-    return rcpp_result_gen;
-END_RCPP
+SEXP prepare_bcl_storage(Rcpp::List y_list_R,
+                         Rcpp::List X_list_R,
+                         Rcpp::List valid_pairs_list_R,
+                         Rcpp::List dist_pairs_list_R);
+RcppExport SEXP _blockpairwise_prepare_bcl_storage(SEXP y_list_RSEXP,
+                                                   SEXP X_list_RSEXP,
+                                                   SEXP valid_pairs_list_RSEXP,
+                                                   SEXP dist_pairs_list_RSEXP) {
+  BEGIN_RCPP
+  Rcpp::RObject rcpp_result_gen;
+  Rcpp::RNGScope rcpp_rngScope_gen;
+  Rcpp::traits::input_parameter< Rcpp::List >::type y_list_R(y_list_RSEXP);
+  Rcpp::traits::input_parameter< Rcpp::List >::type X_list_R(X_list_RSEXP);
+  Rcpp::traits::input_parameter< Rcpp::List >::type valid_pairs_list_R(valid_pairs_list_RSEXP);
+  Rcpp::traits::input_parameter< Rcpp::List >::type dist_pairs_list_R(dist_pairs_list_RSEXP);
+  rcpp_result_gen = Rcpp::wrap(prepare_bcl_storage(y_list_R, X_list_R,
+                                                   valid_pairs_list_R,
+                                                   dist_pairs_list_R));
+  return rcpp_result_gen;
+  END_RCPP
 }
 // bcl_gaussian_marginal_ptr
 double bcl_gaussian_marginal_ptr(SEXP ptr_, double mu, double sigma2, double phi, double t, double t2, double nu);
