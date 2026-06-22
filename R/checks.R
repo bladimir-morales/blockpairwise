@@ -1,29 +1,3 @@
-validate_spatial_data <- function(data) {
-
-  data <- as.data.frame(data)
-
-  if (ncol(data) < 3L) {
-    stop("data must have at least three columns: x, y, z.", call. = FALSE)
-  }
-
-  if (!all(c("x", "y", "z") %in% names(data))) {
-    names(data)[1:3] <- c("x", "y", "z")
-  }
-
-  data <- data[, c("x", "y", "z"), drop = FALSE]
-
-  if (!all(vapply(data, is.numeric, logical(1)))) {
-    stop("x, y and z must be numeric.", call. = FALSE)
-  }
-
-  if (any(!stats::complete.cases(data))) {
-    stop("data contains missing values.", call. = FALSE)
-  }
-
-  data
-}
-
-
 validate_par <- function(par) {
 
   if (!is.numeric(par) || length(par) != 5L) {
