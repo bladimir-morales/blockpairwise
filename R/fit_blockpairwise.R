@@ -19,7 +19,8 @@
 #'
 #' @return Object of class "bp_fit".
 #' @export
-fit_blockpairwise <- function(data,
+fit_blockpairwise <- function(y,
+                              coords,
                               par,
                               lower,
                               upper,
