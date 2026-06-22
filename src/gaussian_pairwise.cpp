@@ -126,10 +126,11 @@ struct GaussianConditionalContribution {
 
 // [[Rcpp::export]]
 SEXP prepare_bcl_storage(Rcpp::List Z_list_R,
+                         Rcpp::List X_list_R,
                          Rcpp::List valid_pairs_list_R,
                          Rcpp::List dist_pairs_list_R) {
   BCLPtr ptr(
-      new BCLStorage(Z_list_R, valid_pairs_list_R, dist_pairs_list_R),
+      new BCLStorage(Z_list_R, X_list_R, valid_pairs_list_R, dist_pairs_list_R),
       true
   );
 

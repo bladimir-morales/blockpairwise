@@ -9,8 +9,8 @@ matern <- function(d, phi, nu) {
     .Call(`_blockpairwise_matern`, d, phi, nu)
 }
 
-prepare_bcl_storage <- function(Z_list_R, valid_pairs_list_R, dist_pairs_list_R) {
-    .Call(`_blockpairwise_prepare_bcl_storage`, Z_list_R, valid_pairs_list_R, dist_pairs_list_R)
+prepare_bcl_storage <- function(Z_list_R, X_list_R, valid_pairs_list_R, dist_pairs_list_R) {
+    .Call(`_blockpairwise_prepare_bcl_storage`, Z_list_R, X_list_R, valid_pairs_list_R, dist_pairs_list_R)
 }
 
 bcl_gaussian_marginal_ptr <- function(ptr_, mu, sigma2, phi, t, t2, nu) {

@@ -55,7 +55,8 @@ prepare_bcl_data <- function(y,
 
 prepare_bcl_ptr <- function(precomp) {
   prepare_bcl_storage(
-    y_list_R = precomp$yk,
+    Z_list_R = precomp$yk,
+    X_list_R = precomp$Xk,
     valid_pairs_list_R = precomp$valid_pairs,
     dist_pairs_list_R = precomp$dist_pairs
   )

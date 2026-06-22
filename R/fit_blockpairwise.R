@@ -99,9 +99,9 @@ fit_blockpairwise <- function(y,
       stop("X contains non-finite values.", call. = FALSE)
     }
 
+    colnames(X) <- c("Intercept", paste0("x", seq_len(ncol(X)-1)))
   }
 
-  colnames(X) <- paste0("x", seq_len(ncol(X))-1)
   p_beta <- ncol(X)
 
   beta_names <- paste0("beta_", seq_len(ncol(X))-1)
@@ -167,7 +167,7 @@ fit_blockpairwise <- function(y,
   start_param_log <- c(
     log_sill   = log(unname(start_param["sill"])),
     log_range  = log(unname(start_param["range"])),
-    log_nugget = log(unname(start_param["nugget"]) + 1e-16),
+    log_nugget = log(unname(start_param["nugget"]) + eps_nugget),
     log_smooth = log(unname(start_param["smooth"]))
   )
 
@@ -181,7 +181,7 @@ fit_blockpairwise <- function(y,
     fixed_param_names[fixed_param_names == "smooth "]     <- "log_smooth"
   }
 
-  all_names_opt <- c(beta_names, names(start_log_param))
+  all_names_opt <- c(beta_names, names(start_param_log))
 
   free_names_opt <- setdiff(all_names_opt, fixed_param_names_opt)
 
@@ -215,10 +215,10 @@ fit_blockpairwise <- function(y,
 
   storage_ptr <- prepare_bcl_ptr(precomp)
 
-  # 9. Objetivo en escala log
+  # 9. Objetivo en escala log ----
 
   objective <- make_objective_covariates_logscale(
-    start_opt = start_opt,
+    start_param_log = start_param_log,
     free_names_opt = free_names_opt,
     beta_names = beta_names,
     storage_ptr = storage_ptr,
@@ -226,7 +226,8 @@ fit_blockpairwise <- function(y,
     eps_nugget = eps_nugget
   )
 
-  par0 <- start_opt[free_names_opt]
+  par0 <- start_param_log[free_names_opt]
+  #start_param_log --start_opt
 
   # 10. Optimización
 
@@ -569,6 +570,93 @@ bp_check_param <- function(start_param,
 
   invisible(TRUE)
 }
+
+make_objective_log <- function(start_param_log,
+                               free_names_opt,
+                               beta_names,
+                               storage_ptr,
+                               likelihood,
+                               eps_nugget) {
+
+  force(start_param_log)
+  force(free_names_opt)
+  force(beta_names)
+  force(storage_ptr)
+  force(likelihood)
+  force(eps_nugget)
+
+  function(par_free_opt) {
+
+    par_opt <- start_param_log
+    par_opt[free_names_opt] <- par_free_opt
+
+    beta <- par_opt[beta_names]
+
+    sill   <- exp(unname(par_opt["log_sill"]))
+    range  <- exp(unname(par_opt["log_range"]))
+    nugget <- exp(unname(par_opt["log_nugget"])) - eps_nugget
+    smooth <- exp(unname(par_opt["log_smooth"]))
+
+    if (!is.finite(nugget)) {
+      nugget <- NA_real_
+    } else {
+      nugget <- max(nugget, 0)
+    }
+
+    if (any(!is.finite(beta)) ||
+        !is.finite(sill) ||
+        !is.finite(range) ||
+        !is.finite(nugget) ||
+        !is.finite(smooth) ||
+        sill <= 0 ||
+        range <= 0 ||
+        nugget < 0 ||
+        smooth <= 0) {
+      return(1e10)
+    }
+
+    total_var <- sill + nugget
+    total_var2 <- total_var * total_var
+
+    if (!is.finite(total_var) || !is.finite(total_var2) || total_var <= 0) {
+      return(1e10)
+    }
+
+    val <- switch(
+      likelihood,
+
+      marginal = bcl_gaussian_marginal_X_ptr(
+        storage_ptr,
+        as.numeric(beta),
+        sill,
+        range,
+        total_var,
+        total_var2,
+        smooth
+      ),
+
+      conditional = bcl_gaussian_conditional_X_ptr(
+        storage_ptr,
+        as.numeric(beta),
+        sill,
+        range,
+        total_var,
+        total_var2,
+        smooth
+      )
+    )
+
+    if (!is.finite(val)) {
+      return(1e10)
+    }
+
+    val
+  }
+}
+
+
+
+#---------------------------
 
 fit_blockpairwise <- function(data,
                               par,
