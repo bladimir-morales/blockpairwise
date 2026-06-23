@@ -51,9 +51,7 @@ fit_blockpairwise <- function(y,
   cblocks    <- match.arg(cblocks)
   fweight    <- match.arg(fweight)
 
-
-  # 1. Response
-
+  # 1. Response validation
 
   y <- as.numeric(y)
 
@@ -68,8 +66,7 @@ fit_blockpairwise <- function(y,
   n <- length(y)
 
 
-  # 2. Coordinates
-
+  # 2. Coordinates validation
 
   coords <- as.matrix(coords)
 
@@ -90,8 +87,7 @@ fit_blockpairwise <- function(y,
   }
 
 
-  # 3. Design matrix
-
+  # 3. Design matrix validation
 
   if (is.null(X)) {
 
@@ -126,9 +122,7 @@ fit_blockpairwise <- function(y,
   cov_names  <- c("sill", "range", "nugget", "smooth")
   all_names  <- c(beta_names, cov_names)
 
-
-  # 4. Starting values in natural scale
-
+  # 4. Starting values in natural scale ----
 
   start_param <- bp_make_start_param(
     y = y,
@@ -143,9 +137,7 @@ fit_blockpairwise <- function(y,
 
   start_param <- start_param[all_names]
 
-
-  # 5. Fixed parameters
-
+  # 5. Fixed parameters ----
 
   if (!is.null(fixed_param)) {
 
@@ -183,9 +175,7 @@ fit_blockpairwise <- function(y,
     cov_names = cov_names
   )
 
-
-  # 6. Optimization scale
-
+  # 6. Optimization scale ----
 
   start_opt <- make_start_opt(
     start_param = start_param,
@@ -208,9 +198,7 @@ fit_blockpairwise <- function(y,
 
   par0 <- start_opt[free_names_opt]
 
-
-  # 7. Bounds
-
+  # 7. Bounds ----
 
   bounds <- normalize_bounds(
     lower = lower,
@@ -222,8 +210,7 @@ fit_blockpairwise <- function(y,
   upper_opt <- bounds$upper
 
 
-  # 8. Precomputation
-
+  # 8. Precomputation ----
 
   if (is.null(precomp)) {
 
@@ -248,9 +235,7 @@ fit_blockpairwise <- function(y,
 
   storage_ptr <- prepare_bcl_ptr(precomp)
 
-
   # 9. Objective function
-
 
   objective <- make_objective_bcl(
     start_opt = start_opt,
@@ -262,16 +247,7 @@ fit_blockpairwise <- function(y,
     eps_nugget = eps_nugget
   )
 
-  eval_env <- new.env(parent = emptyenv())
-  eval_env$n <- 0L
-
-  objective_counted <- function(par_free_opt) {
-    eval_env$n <- eval_env$n + 1L
-    objective(par_free_opt)
-  }
-
-
-  # 10. Optimization
+  # 10. Optimization ----
 
 
   time_fit <- system.time({
@@ -280,7 +256,7 @@ fit_blockpairwise <- function(y,
 
       opt <- stats::optim(
         par = par0,
-        fn = objective_counted,
+        fn = objective,
         method = optimizer,
         lower = lower_opt,
         upper = upper_opt,
@@ -292,7 +268,7 @@ fit_blockpairwise <- function(y,
 
       opt <- stats::optim(
         par = par0,
-        fn = objective_counted,
+        fn = objective,
         method = optimizer,
         control = control,
         ...
@@ -300,11 +276,7 @@ fit_blockpairwise <- function(y,
     }
   })
 
-  n_eval_real <- eval_env$n
-
-
-  # 11. Decode fitted parameters
-
+  # 11. Decode fitted parameters ----
 
   par_hat_opt <- start_opt
   par_hat_opt[free_names_opt] <- opt$par
@@ -325,8 +297,7 @@ fit_blockpairwise <- function(y,
   names(beta_hat) <- sub("^beta_", "", names(beta_hat))
 
 
-  # 12. Output
-
+  # 12. Output ----
 
   out <- list(
     call = match.call(),
@@ -369,10 +340,6 @@ fit_blockpairwise <- function(y,
 
     time = time_fit[1:3],
     opt = opt,
-
-    n_eval_real = n_eval_real,
-    time_per_eval = unname(time_fit["elapsed"]) / max(n_eval_real, 1L),
-
     precomp = precomp
   )
 
