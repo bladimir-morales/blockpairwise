@@ -51,9 +51,9 @@ fit_blockpairwise <- function(y,
   cblocks    <- match.arg(cblocks)
   fweight    <- match.arg(fweight)
 
-  # ------------------------------------------------------------
+
   # 1. Response
-  # ------------------------------------------------------------
+
 
   y <- as.numeric(y)
 
@@ -67,9 +67,9 @@ fit_blockpairwise <- function(y,
 
   n <- length(y)
 
-  # ------------------------------------------------------------
+
   # 2. Coordinates
-  # ------------------------------------------------------------
+
 
   coords <- as.matrix(coords)
 
@@ -89,9 +89,9 @@ fit_blockpairwise <- function(y,
     stop("coords contains non-finite values.", call. = FALSE)
   }
 
-  # ------------------------------------------------------------
+
   # 3. Design matrix
-  # ------------------------------------------------------------
+
 
   if (is.null(X)) {
 
@@ -126,9 +126,9 @@ fit_blockpairwise <- function(y,
   cov_names  <- c("sill", "range", "nugget", "smooth")
   all_names  <- c(beta_names, cov_names)
 
-  # ------------------------------------------------------------
+
   # 4. Starting values in natural scale
-  # ------------------------------------------------------------
+
 
   start_param <- bp_make_start_param(
     y = y,
@@ -143,9 +143,9 @@ fit_blockpairwise <- function(y,
 
   start_param <- start_param[all_names]
 
-  # ------------------------------------------------------------
+
   # 5. Fixed parameters
-  # ------------------------------------------------------------
+
 
   if (!is.null(fixed_param)) {
 
@@ -183,9 +183,9 @@ fit_blockpairwise <- function(y,
     cov_names = cov_names
   )
 
-  # ------------------------------------------------------------
+
   # 6. Optimization scale
-  # ------------------------------------------------------------
+
 
   start_opt <- make_start_opt(
     start_param = start_param,
@@ -208,9 +208,9 @@ fit_blockpairwise <- function(y,
 
   par0 <- start_opt[free_names_opt]
 
-  # ------------------------------------------------------------
+
   # 7. Bounds
-  # ------------------------------------------------------------
+
 
   bounds <- normalize_bounds(
     lower = lower,
@@ -221,9 +221,9 @@ fit_blockpairwise <- function(y,
   lower_opt <- bounds$lower
   upper_opt <- bounds$upper
 
-  # ------------------------------------------------------------
+
   # 8. Precomputation
-  # ------------------------------------------------------------
+
 
   if (is.null(precomp)) {
 
@@ -248,9 +248,9 @@ fit_blockpairwise <- function(y,
 
   storage_ptr <- prepare_bcl_ptr(precomp)
 
-  # ------------------------------------------------------------
+
   # 9. Objective function
-  # ------------------------------------------------------------
+
 
   objective <- make_objective_bcl(
     start_opt = start_opt,
@@ -270,9 +270,9 @@ fit_blockpairwise <- function(y,
     objective(par_free_opt)
   }
 
-  # ------------------------------------------------------------
+
   # 10. Optimization
-  # ------------------------------------------------------------
+
 
   time_fit <- system.time({
 
@@ -302,9 +302,9 @@ fit_blockpairwise <- function(y,
 
   n_eval_real <- eval_env$n
 
-  # ------------------------------------------------------------
+
   # 11. Decode fitted parameters
-  # ------------------------------------------------------------
+
 
   par_hat_opt <- start_opt
   par_hat_opt[free_names_opt] <- opt$par
@@ -324,9 +324,9 @@ fit_blockpairwise <- function(y,
 
   names(beta_hat) <- sub("^beta_", "", names(beta_hat))
 
-  # ------------------------------------------------------------
+
   # 12. Output
-  # ------------------------------------------------------------
+
 
   out <- list(
     call = match.call(),
@@ -564,9 +564,9 @@ bp_make_start_param <- function(y,
 
   all_names <- c(beta_names, cov_names)
 
-  # ------------------------------------------------------------
+
   # 1. Fixed parameters
-  # ------------------------------------------------------------
+
 
   if (!is.null(fixed_param)) {
 
@@ -600,9 +600,9 @@ bp_make_start_param <- function(y,
   free_beta_names <- setdiff(beta_names, fixed_names)
   free_cov_names  <- setdiff(cov_names, fixed_names)
 
-  # ------------------------------------------------------------
+
   # 2. Beta starts
-  # ------------------------------------------------------------
+
 
   beta0 <- rep(NA_real_, p_beta)
   names(beta0) <- beta_names
@@ -644,9 +644,9 @@ bp_make_start_param <- function(y,
 
   beta0[is.na(beta0)] <- 0
 
-  # ------------------------------------------------------------
+
   # 3. Residual variance start
-  # ------------------------------------------------------------
+
 
   residuals0 <- as.numeric(y - X %*% beta0)
 
@@ -660,9 +660,9 @@ bp_make_start_param <- function(y,
     v0 <- 1
   }
 
-  # ------------------------------------------------------------
+
   # 4. Cheap spatial range start
-  # ------------------------------------------------------------
+
 
   coord_range <- apply(coords, 2L, function(z) {
     max(z) - min(z)
@@ -680,9 +680,9 @@ bp_make_start_param <- function(y,
     range0 <- 1
   }
 
-  # ------------------------------------------------------------
+
   # 5. Covariance starts
-  # ------------------------------------------------------------
+
 
   cov0 <- c(
     sill   = NA_real_,
