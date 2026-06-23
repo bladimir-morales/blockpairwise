@@ -26,23 +26,28 @@ fit_blockpairwise <- function(y,
                               start_cov = NULL,
                               fixed_param = NULL,
                               likelihood = c("conditional", "marginal"),
-                              optimizer = c("BFGS", "L-BFGS-B", "Nelder-Mead", "CG"),
+                              optimizer = c("L-BFGS-B", "BFGS", "Nelder-Mead", "CG", "nlminb"),
+                              par_scale = c("natural", "log"),
                               cblocks = c("regular", "kmeans", "row", "col"),
                               nblocks = 1L,
                               fweight = c("nn", "dist"),
                               nnk = NULL,
                               w = NULL,
                               precomp = NULL,
-                              control = list(),
+                              lower = NULL,
+                              upper = NULL,
                               eps_nugget = 1e-10,
+                              control = NULL,
                               ...) {
 
   likelihood <- match.arg(likelihood)
   optimizer  <- match.arg(optimizer)
+  par_scale  <- match.arg(par_scale)
   cblocks    <- match.arg(cblocks)
   fweight    <- match.arg(fweight)
 
-  # 1. Validación de respuesta
+
+  # 1. Validación de y
 
   y <- as.numeric(y)
 
@@ -54,7 +59,10 @@ fit_blockpairwise <- function(y,
     stop("y contains non-finite values.", call. = FALSE)
   }
 
-  # 2. Validación de coordenadas
+  n <- length(y)
+
+
+  # 2. Validación de coords
 
   coords <- as.matrix(coords)
 
@@ -62,7 +70,7 @@ fit_blockpairwise <- function(y,
     stop("coords must be numeric.", call. = FALSE)
   }
 
-  if (nrow(coords) != length(y)) {
+  if (nrow(coords) != n) {
     stop("nrow(coords) must be equal to length(y).", call. = FALSE)
   }
 
@@ -74,7 +82,6 @@ fit_blockpairwise <- function(y,
     stop("coords contains non-finite values.", call. = FALSE)
   }
 
-  n <- length(y)
 
   # 3. Matriz de diseño
 
@@ -99,16 +106,19 @@ fit_blockpairwise <- function(y,
       stop("X contains non-finite values.", call. = FALSE)
     }
 
-    colnames(X) <- c("Intercept", paste0("x", seq_len(ncol(X)-1)))
+    if (is.null(colnames(X))) {
+      colnames(X) <- c("Intercept", paste0("x", seq_len(ncol(X) - 1L)))
+    }
   }
 
   p_beta <- ncol(X)
 
-  beta_names <- paste0("beta_", seq_len(ncol(X))-1)
+  beta_names <- paste0("beta_", seq_len(p_beta) - 1L)
   cov_names  <- c("sill", "range", "nugget", "smooth")
   all_names  <- c(beta_names, cov_names)
 
-  # 4. Valores iniciales en escala natural ----
+
+  # 4. Parámetros iniciales naturales
 
   start_param <- bp_make_start_param(
     y = y,
@@ -116,13 +126,15 @@ fit_blockpairwise <- function(y,
     X = X,
     start_beta = start_beta,
     start_cov = start_cov,
+    fixed_param = fixed_param,
     beta_names = beta_names,
     cov_names = cov_names
   )
 
   start_param <- start_param[all_names]
 
-  # 5. Parámetros fijos por nombre
+
+  # 5. Parámetros fijos
 
   if (!is.null(fixed_param)) {
 
@@ -154,43 +166,55 @@ fit_blockpairwise <- function(y,
     fixed_param_names <- character(0L)
   }
 
-  # 6. Chequeo en escala natural ----
-
   bp_check_param(
     start_param = start_param,
     beta_names = beta_names,
     cov_names = cov_names
   )
 
-  # 7. Transformación a escala de optimización
 
-  start_opt <- c(
-    start_param[beta_names],
-    log_sill   = log(unname(start_param["sill"])),
-    log_range  = log(unname(start_param["range"])),
-    log_nugget = log(unname(start_param["nugget"]) + eps_nugget),
-    log_smooth = log(unname(start_param["smooth"]))
+  # 6. Escala de optimización ----
+
+  start_opt <- make_start_opt(
+    start_param = start_param,
+    beta_names = beta_names,
+    par_scale = par_scale,
+    eps_nugget = eps_nugget
   )
 
-  fixed_param_names_opt <- fixed_param_names
-
-  fixed_param_names_opt[fixed_param_names_opt == "sill"]   <- "log_sill"
-  fixed_param_names_opt[fixed_param_names_opt == "range"]  <- "log_range"
-  fixed_param_names_opt[fixed_param_names_opt == "nugget"] <- "log_nugget"
-  fixed_param_names_opt[fixed_param_names_opt == "smooth"] <- "log_smooth"
-
+  fixed_param_names_opt <- map_fixed_to_opt(
+    fixed_param_names = fixed_param_names,
+    par_scale = par_scale
+  )
 
   all_names_opt <- names(start_opt)
-
   free_names_opt <- setdiff(all_names_opt, fixed_param_names_opt)
 
   if (length(free_names_opt) == 0L) {
     stop("All parameters are fixed. There is nothing to optimize.", call. = FALSE)
   }
 
-  # 8. Precomputación de bloques
+  par0 <- start_opt[free_names_opt]
+
+
+  # 7. Bounds ----
+
+  bounds <- normalize_bounds(
+    lower = lower,
+    upper = upper,
+    free_names_opt = free_names_opt,
+    par_scale = par_scale,
+    eps_nugget = eps_nugget
+  )
+
+  lower_opt <- bounds$lower
+  upper_opt <- bounds$upper
+
+
+  # 8. Precomputación ----
 
   if (is.null(precomp)) {
+
     precomp <- prepare_bcl_data(
       y = y,
       coords = coords,
@@ -214,72 +238,142 @@ fit_blockpairwise <- function(y,
 
   storage_ptr <- prepare_bcl_ptr(precomp)
 
-  # 9. Objetivo en escala log ----
 
-  objective <- make_objective_log(
+  # 9. Objetivo ----
+
+  objective <- make_objective_bcl(
     start_opt = start_opt,
     free_names_opt = free_names_opt,
     beta_names = beta_names,
     storage_ptr = storage_ptr,
     likelihood = likelihood,
+    par_scale = par_scale,
     eps_nugget = eps_nugget
   )
 
-  par0 <- start_opt[free_names_opt]
+  eval_env <- new.env(parent = emptyenv())
+  eval_env$n <- 0L
 
-  # 10. Optimización ----
+  objective_counted <- function(par_free_opt) {
+    eval_env$n <- eval_env$n + 1L
+    objective(par_free_opt)
+  }
+
+
+  # 10. Controles por defecto ----
+
+  if (optimizer == "L-BFGS-B") {
+
+    if (par_scale == "log") {
+
+      if (is.null(control$factr)) {
+        control$factr <- 1e8
+      }
+
+      if (is.null(control$pgtol)) {
+        control$pgtol <- 1e-4
+      }
+
+      if (is.null(control$ndeps)) {
+        control$ndeps <- rep(1e-3, length(par0))
+      }
+
+      if (is.null(control$maxit)) {
+        control$maxit <- 100L
+      }
+
+    } else {
+
+      # Escala natural: preservar comportamiento tipo main.
+      if (is.null(control$maxit)) {
+        control$maxit <- 100L
+      }
+
+      # No fijar ndeps automáticamente en escala natural.
+      # No fijar factr/pgtol automáticamente si buscas reproducir main.
+    }
+  }
+
+
+  # 11. Optimización
 
   time_fit <- system.time({
 
-    opt <- stats::optim(
-      par = par0,
-      fn = objective,
-      method = optimizer,
-      control = control,
-      ...
-    )
+    if (optimizer == "nlminb") {
+
+      opt_raw <- stats::nlminb(
+        start = par0,
+        objective = objective_counted,
+        lower = lower_opt,
+        upper = upper_opt,
+        control = modifyList(
+          list(
+            eval.max = 120L,
+            iter.max = 80L,
+            rel.tol = 1e-6,
+            x.tol = 1e-5
+          ),
+          control
+        ),
+        ...
+      )
+
+      opt <- list(
+        par = opt_raw$par,
+        value = opt_raw$objective,
+        counts = c(
+          "function" = unname(opt_raw$evaluations["function"]),
+          "gradient" = unname(opt_raw$evaluations["gradient"])
+        ),
+        convergence = opt_raw$convergence,
+        message = opt_raw$message,
+        raw = opt_raw
+      )
+
+    } else {
+
+      opt <- stats::optim(
+        par = par0,
+        fn = objective_counted,
+        method = optimizer,
+        #lower = if (optimizer == "L-BFGS-B") lower_opt else -Inf,
+        #upper = if (optimizer == "L-BFGS-B") upper_opt else Inf,
+        ...
+      )
+    }
   })
 
-  # 11. Reconstrucción de parámetros
+  n_eval_real <- eval_env$n
+
+  # 12. Reconstrucción
 
   par_hat_opt <- start_opt
   par_hat_opt[free_names_opt] <- opt$par
 
-
-  beta <- par_hat_opt[beta_names]
-
-  sill <- exp(unname(par_hat_opt["log_sill"]))
-  range    <- exp(unname(par_hat_opt["log_range"]))
-  nugget   <- exp(unname(par_hat_opt["log_nugget"])) - eps_nugget
-  smooth     <- exp(unname(par_hat_opt["log_smooth"]))
-
-  if (!is.finite(nugget)) {
-    nugget <- NA_real_
-  } else {
-    nugget <- max(nugget, 0)
-  }
-
-  par_hat <- c(
-    beta,
-    sill = sill,
-    range    = range,
-    nugget   = nugget,
-    smooth  = smooth
+  decoded <- decode_opt_param(
+    par_opt = par_hat_opt,
+    beta_names = beta_names,
+    par_scale = par_scale,
+    eps_nugget = eps_nugget
   )
 
+  par_hat <- decoded$par
   par_hat <- par_hat[all_names]
+
   beta_hat <- par_hat[beta_names]
   cov_hat  <- par_hat[cov_names]
 
   names(beta_hat) <- sub("^beta_", "", names(beta_hat))
 
-  # 12. Salida
+
+  # 13. Salida
 
   out <- list(
     call = match.call(),
 
     par = par_hat,
     par_optim_scale = par_hat_opt,
+    par_scale = par_scale,
 
     coefficients = beta_hat,
     cov_par = cov_hat,
@@ -290,6 +384,10 @@ fit_blockpairwise <- function(y,
     fixed_param = fixed_param,
     fixed_param_names = fixed_param_names,
     free_param_names = setdiff(all_names, fixed_param_names),
+    free_param_names_opt = free_names_opt,
+
+    lower = lower_opt,
+    upper = upper_opt,
 
     value = opt$value,
     convergence = opt$convergence,
@@ -311,6 +409,10 @@ fit_blockpairwise <- function(y,
 
     time = time_fit[1:3],
     opt = opt,
+
+    n_eval_real = n_eval_real,
+    time_per_eval = unname(time_fit["elapsed"]) / max(n_eval_real, 1L),
+
     precomp = precomp
   )
 
@@ -319,6 +421,163 @@ fit_blockpairwise <- function(y,
   out
 }
 
+make_start_opt <- function(start_param,
+                           beta_names,
+                           par_scale = c("natural", "log"),
+                           eps_nugget = 1e-10) {
+
+  par_scale <- match.arg(par_scale)
+
+  if (par_scale == "natural") {
+
+    out <- c(
+      start_param[beta_names],
+      sill   = unname(start_param["sill"]),
+      range  = unname(start_param["range"]),
+      nugget = unname(start_param["nugget"]),
+      smooth = unname(start_param["smooth"])
+    )
+
+  } else {
+
+    out <- c(
+      start_param[beta_names],
+      log_sill   = log(unname(start_param["sill"])),
+      log_range  = log(unname(start_param["range"])),
+      log_nugget = log(unname(start_param["nugget"]) + eps_nugget),
+      log_smooth = log(unname(start_param["smooth"]))
+    )
+  }
+
+  out
+}
+
+map_fixed_to_opt <- function(fixed_param_names,
+                             par_scale = c("natural", "log")) {
+
+  par_scale <- match.arg(par_scale)
+
+  out <- fixed_param_names
+
+  if (par_scale == "log") {
+    out[out == "sill"]   <- "log_sill"
+    out[out == "range"]  <- "log_range"
+    out[out == "nugget"] <- "log_nugget"
+    out[out == "smooth"] <- "log_smooth"
+  }
+
+  out
+}
+
+decode_opt_param <- function(par_opt,
+                             beta_names,
+                             par_scale = c("natural", "log"),
+                             eps_nugget = 1e-10) {
+
+  par_scale <- match.arg(par_scale)
+
+  beta <- par_opt[beta_names]
+
+  if (par_scale == "natural") {
+
+    sill   <- unname(par_opt["sill"])
+    range  <- unname(par_opt["range"])
+    nugget <- unname(par_opt["nugget"])
+    smooth <- unname(par_opt["smooth"])
+
+  } else {
+
+    sill   <- exp(unname(par_opt["log_sill"]))
+    range  <- exp(unname(par_opt["log_range"]))
+    nugget <- exp(unname(par_opt["log_nugget"])) - eps_nugget
+    smooth <- exp(unname(par_opt["log_smooth"]))
+  }
+
+  if (!is.finite(nugget)) {
+    nugget <- NA_real_
+  } else {
+    nugget <- max(nugget, 0)
+  }
+
+  par <- c(
+    beta,
+    sill = sill,
+    range = range,
+    nugget = nugget,
+    smooth = smooth
+  )
+
+  list(
+    par = par,
+    beta = beta,
+    sill = sill,
+    range = range,
+    nugget = nugget,
+    smooth = smooth
+  )
+}
+
+normalize_bounds <- function(lower,
+                             upper,
+                             free_names_opt,
+                             par_scale = c("natural", "log"),
+                             eps_nugget = 1e-10) {
+
+  par_scale <- match.arg(par_scale)
+
+  if (is.null(lower)) {
+    lower_opt <- rep(-Inf, length(free_names_opt))
+    names(lower_opt) <- free_names_opt
+  } else {
+
+    lower <- as.numeric(lower) |> stats::setNames(names(lower))
+
+    if (is.null(names(lower))) {
+      stop("lower must be a named numeric vector.", call. = FALSE)
+    }
+
+    lower_opt <- lower[free_names_opt]
+  }
+
+  if (is.null(upper)) {
+    upper_opt <- rep(Inf, length(free_names_opt))
+    names(upper_opt) <- free_names_opt
+  } else {
+
+    upper <- as.numeric(upper) |> stats::setNames(names(upper))
+
+    if (is.null(names(upper))) {
+      stop("upper must be a named numeric vector.", call. = FALSE)
+    }
+
+    upper_opt <- upper[free_names_opt]
+  }
+
+  if (anyNA(lower_opt)) {
+    stop(
+      "lower must contain bounds for all free optimization parameters: ",
+      paste(free_names_opt, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  if (anyNA(upper_opt)) {
+    stop(
+      "upper must contain bounds for all free optimization parameters: ",
+      paste(free_names_opt, collapse = ", "),
+      call. = FALSE
+    )
+  }
+
+  if (any(lower_opt >= upper_opt)) {
+    stop("Each lower bound must be strictly smaller than its upper bound.", call. = FALSE)
+  }
+
+  list(
+    lower = lower_opt,
+    upper = upper_opt
+  )
+}
 
 
 bp_make_start_param <- function(y,
@@ -583,18 +842,22 @@ bp_check_param <- function(start_param,
   invisible(TRUE)
 }
 
-make_objective_log <- function(start_opt,
+make_objective_bcl <- function(start_opt,
                                free_names_opt,
                                beta_names,
                                storage_ptr,
                                likelihood,
-                               eps_nugget) {
+                               par_scale = c("natural", "log"),
+                               eps_nugget = 1e-10) {
+
+  par_scale <- match.arg(par_scale)
 
   force(start_opt)
   force(free_names_opt)
   force(beta_names)
   force(storage_ptr)
   force(likelihood)
+  force(par_scale)
   force(eps_nugget)
 
   function(par_free_opt) {
@@ -602,18 +865,18 @@ make_objective_log <- function(start_opt,
     par_opt <- start_opt
     par_opt[free_names_opt] <- par_free_opt
 
-    beta <- par_opt[beta_names]
+    decoded <- decode_opt_param(
+      par_opt = par_opt,
+      beta_names = beta_names,
+      par_scale = par_scale,
+      eps_nugget = eps_nugget
+    )
 
-    sill   <- exp(unname(par_opt["log_sill"]))
-    range  <- exp(unname(par_opt["log_range"]))
-    nugget <- exp(unname(par_opt["log_nugget"])) - eps_nugget
-    smooth <- exp(unname(par_opt["log_smooth"]))
-
-    if (!is.finite(nugget)) {
-      nugget <- NA_real_
-    } else {
-      nugget <- max(nugget, 0)
-    }
+    beta   <- decoded$beta
+    sill   <- decoded$sill
+    range  <- decoded$range
+    nugget <- decoded$nugget
+    smooth <- decoded$smooth
 
     if (any(!is.finite(beta)) ||
         !is.finite(sill) ||
@@ -665,5 +928,3 @@ make_objective_log <- function(start_opt,
     val
   }
 }
-
-

@@ -9,71 +9,6 @@
 
 using namespace Rcpp;
 
-struct GaussianConditionalMuContribution {
-
-  double mu;
-  double sill;
-  double range;
-  double t;
-  double t2;
-  double smooth;
-  double logt;
-
-  GaussianConditionalMuContribution(double mu_,
-                                    double sill_,
-                                    double range_,
-                                    double t_,
-                                    double t2_,
-                                    double smooth_)
-    : mu(mu_), sill(sill_), range(range_),
-      t(t_), t2(t2_), smooth(smooth_), logt(0.0) {
-
-    if (!std::isfinite(mu_)) {
-      Rcpp::stop("mu must be finite.");
-    }
-
-    if (t_ <= 0.0 || !std::isfinite(t_)) {
-      Rcpp::stop("t must be positive and finite.");
-    }
-
-    if (sill_ <= 0.0 || !std::isfinite(sill_)) {
-      Rcpp::stop("sill must be positive and finite.");
-    }
-
-    if (range_ <= 0.0 || !std::isfinite(range_)) {
-      Rcpp::stop("range must be positive and finite.");
-    }
-
-    if (smooth_ <= 0.0 || !std::isfinite(smooth_)) {
-      Rcpp::stop("smooth must be positive and finite.");
-    }
-
-    if (t2_ <= 0.0 || !std::isfinite(t2_)) {
-      Rcpp::stop("t2 must be positive and finite.");
-    }
-
-    logt = std::log(t_);
-  }
-
-  inline double operator()(double yi,
-                         double yj,
-                         double h) const {
-
-    const double ei = yi - mu;
-    const double ej = yj - mu;
-
-    const double rho = rho_matern(h, range, smooth);
-    const double r   = rho * sill;
-    const double s   = t2 - r * r;
-
-    if (s <= 0.0 || !std::isfinite(s)) return 0.0;
-
-    const double diff = ei - (r * ej / t);
-
-    return std::log(s) - logt + (t / s) * diff * diff;
-  }
-};
-
 
 struct GaussianMarginalContribution {
 
@@ -248,20 +183,3 @@ double bcl_gaussian_conditional_ptr(SEXP ptr_,
   return 0.5 * parallel_block_pairwise_sum(*ptr, contrib);
 }
 
-// [[Rcpp::export]]
-double bcl_gaussian_conditional_mu_ptr(SEXP ptr_,
-                                       double mu,
-                                       double sill,
-                                       double range,
-                                       double t,
-                                       double t2,
-                                       double smooth) {
-
-  BCLPtr ptr(ptr_);
-
-  GaussianConditionalMuContribution contrib(
-      mu, sill, range, t, t2, smooth
-  );
-
-  return 0.5 * parallel_block_pairwise_mu_sum(*ptr, contrib);
-}

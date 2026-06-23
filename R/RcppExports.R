@@ -21,7 +21,3 @@ bcl_gaussian_conditional_ptr <- function(ptr_, beta, sill, range, t, t2, smooth)
     .Call(`_blockpairwise_bcl_gaussian_conditional_ptr`, ptr_, beta, sill, range, t, t2, smooth)
 }
 
-bcl_gaussian_conditional_mu_ptr <- function(ptr_, mu, sill, range, t, t2, smooth) {
-    .Call(`_blockpairwise_bcl_gaussian_conditional_mu_ptr`, ptr_, mu, sill, range, t, t2, smooth)
-}
-

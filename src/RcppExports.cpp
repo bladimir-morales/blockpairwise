@@ -84,23 +84,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// bcl_gaussian_conditional_mu_ptr
-double bcl_gaussian_conditional_mu_ptr(SEXP ptr_, double mu, double sill, double range, double t, double t2, double smooth);
-RcppExport SEXP _blockpairwise_bcl_gaussian_conditional_mu_ptr(SEXP ptr_SEXP, SEXP muSEXP, SEXP sillSEXP, SEXP rangeSEXP, SEXP tSEXP, SEXP t2SEXP, SEXP smoothSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< SEXP >::type ptr_(ptr_SEXP);
-    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
-    Rcpp::traits::input_parameter< double >::type sill(sillSEXP);
-    Rcpp::traits::input_parameter< double >::type range(rangeSEXP);
-    Rcpp::traits::input_parameter< double >::type t(tSEXP);
-    Rcpp::traits::input_parameter< double >::type t2(t2SEXP);
-    Rcpp::traits::input_parameter< double >::type smooth(smoothSEXP);
-    rcpp_result_gen = Rcpp::wrap(bcl_gaussian_conditional_mu_ptr(ptr_, mu, sill, range, t, t2, smooth));
-    return rcpp_result_gen;
-END_RCPP
-}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_blockpairwise_assemble_pairs", (DL_FUNC) &_blockpairwise_assemble_pairs, 3},
@@ -108,7 +91,6 @@ static const R_CallMethodDef CallEntries[] = {
     {"_blockpairwise_prepare_bcl_storage", (DL_FUNC) &_blockpairwise_prepare_bcl_storage, 4},
     {"_blockpairwise_bcl_gaussian_marginal_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_marginal_ptr, 7},
     {"_blockpairwise_bcl_gaussian_conditional_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_conditional_ptr, 7},
-    {"_blockpairwise_bcl_gaussian_conditional_mu_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_conditional_mu_ptr, 7},
     {NULL, NULL, 0}
 };
 
