@@ -6,7 +6,7 @@
 
 struct BCLStorage {
 
-  std::vector<std::vector<double>> Z_list;
+  std::vector<std::vector<double>> y_list;
 
   // X por bloque, guardado en formato fila-major:
   // X_list[b][i * p + q] = X_b(i, q)
@@ -21,26 +21,26 @@ struct BCLStorage {
 
   int nb;
 
-  BCLStorage(Rcpp::List Z_list_R,
+  BCLStorage(Rcpp::List y_list_R,
              Rcpp::List X_list_R,
              Rcpp::List valid_pairs_list_R,
              Rcpp::List dist_pairs_list_R) {
 
-    nb = Z_list_R.size();
+    nb = y_list_R.size();
 
     if (X_list_R.size() != nb) {
-      Rcpp::stop("X_list_R must have the same length as Z_list_R.");
+      Rcpp::stop("X_list_R must have the same length as y_list_R.");
     }
 
     if (valid_pairs_list_R.size() != nb) {
-      Rcpp::stop("valid_pairs_list_R must have the same length as Z_list_R.");
+      Rcpp::stop("valid_pairs_list_R must have the same length as y_list_R.");
     }
 
     if (dist_pairs_list_R.size() != nb) {
-      Rcpp::stop("dist_pairs_list_R must have the same length as Z_list_R.");
+      Rcpp::stop("dist_pairs_list_R must have the same length as y_list_R.");
     }
 
-    Z_list.reserve(nb);
+    y_list.reserve(nb);
     X_list.reserve(nb);
     n_obs.reserve(nb);
     n_cov.reserve(nb);
@@ -52,7 +52,7 @@ struct BCLStorage {
     for (int b = 0; b < nb; ++b) {
 
       Rcpp::NumericVector yb =
-        Rcpp::as<Rcpp::NumericVector>(Z_list_R[b]);
+        Rcpp::as<Rcpp::NumericVector>(y_list_R[b]);
 
       Rcpp::NumericMatrix Xb =
         Rcpp::as<Rcpp::NumericMatrix>(X_list_R[b]);
@@ -66,6 +66,7 @@ struct BCLStorage {
       const int nb_obs = yb.size();
       const int p = Xb.ncol();
       const int n_pairs = pairs_b.nrow();
+
 
       if (Xb.nrow() != nb_obs) {
         Rcpp::stop("Each X matrix must have the same number of rows as its y vector.");
@@ -106,7 +107,7 @@ struct BCLStorage {
         pj_cpp[i] = i2;
       }
 
-      Z_list.push_back(std::move(y_cpp));
+      y_list.push_back(std::move(y_cpp));
       X_list.push_back(std::move(X_cpp));
 
       n_obs.push_back(nb_obs);

@@ -7,6 +7,6 @@
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-double matern(double d, double phi, double nu){
-  return rho_matern(d, phi, nu);
+double matern(double d, double range, double smooth){
+  return rho_matern(d, range, smooth);
 }

@@ -5,21 +5,21 @@
 #include <boost/math/special_functions/bessel.hpp>
 #include <boost/math/special_functions/gamma.hpp>
 
-inline double rho_matern(double d, double phi, double nu) {
+inline double rho_matern(double d, double range, double smooth) {
 
-  if (phi <= 0.0 || nu <= 0.0)
+  if (range <= 0.0 || smooth <= 0.0)
     return NAN;
 
   if (d <= 0.0)
     return 1.0;
 
-  double a = d / phi;
+  double a = d / range;
 
   if (a < 1e-12)
     return 1.0;
 
   // ---- half-integer ν = k + 1/2 ----
-  double k_real = nu - 0.5;
+  double k_real = smooth - 0.5;
   double k_round = std::round(k_real);
   bool is_half_integer = std::abs(k_real - k_round) < 1e-10;
   int k = static_cast<int>(k_round);
@@ -37,18 +37,18 @@ inline double rho_matern(double d, double phi, double nu) {
 
   // ---- general case (thread-safe) ----
 
-  double log_coef = (1.0 - nu) * std::log(2.0)
-    - boost::math::lgamma(nu);
+  double log_coef = (1.0 - smooth) * std::log(2.0)
+    - boost::math::lgamma(smooth);
 
   // Boost Bessel K
-  double bess = boost::math::cyl_bessel_k(nu, a);
+  double bess = boost::math::cyl_bessel_k(smooth, a);
 
   if (!std::isfinite(bess) || bess <= 0.0)
     return 0.0;
 
   double log_besselk = std::log(bess);
 
-  double log_rho = log_coef + nu * std::log(a) + log_besselk;
+  double log_rho = log_coef + smooth * std::log(a) + log_besselk;
 
   return std::exp(log_rho);
 }

@@ -164,24 +164,23 @@ fit_blockpairwise <- function(y,
 
   # 7. Transformación a escala de optimización
 
-  start_param_log <- c(
+  start_opt <- c(
+    start_param[beta_names],
     log_sill   = log(unname(start_param["sill"])),
     log_range  = log(unname(start_param["range"])),
     log_nugget = log(unname(start_param["nugget"]) + eps_nugget),
     log_smooth = log(unname(start_param["smooth"]))
   )
 
+  fixed_param_names_opt <- fixed_param_names
 
-  fixed_param_names_opt <- if (length(fixed_param_names) == 0L) {
-    return(character(0L))
-  } else {
-    fixed_param_names[fixed_param_names == "sill"] <- "log_sill"
-    fixed_param_names[fixed_param_names == "range"]    <- "log_range"
-    fixed_param_names[fixed_param_names == "nugget"]   <- "log_nugget"
-    fixed_param_names[fixed_param_names == "smooth "]     <- "log_smooth"
-  }
+  fixed_param_names_opt[fixed_param_names_opt == "sill"]   <- "log_sill"
+  fixed_param_names_opt[fixed_param_names_opt == "range"]  <- "log_range"
+  fixed_param_names_opt[fixed_param_names_opt == "nugget"] <- "log_nugget"
+  fixed_param_names_opt[fixed_param_names_opt == "smooth"] <- "log_smooth"
 
-  all_names_opt <- c(beta_names, names(start_param_log))
+
+  all_names_opt <- names(start_opt)
 
   free_names_opt <- setdiff(all_names_opt, fixed_param_names_opt)
 
@@ -217,8 +216,8 @@ fit_blockpairwise <- function(y,
 
   # 9. Objetivo en escala log ----
 
-  objective <- make_objective_covariates_logscale(
-    start_param_log = start_param_log,
+  objective <- make_objective_log(
+    start_opt = start_opt,
     free_names_opt = free_names_opt,
     beta_names = beta_names,
     storage_ptr = storage_ptr,
@@ -226,10 +225,9 @@ fit_blockpairwise <- function(y,
     eps_nugget = eps_nugget
   )
 
-  par0 <- start_param_log[free_names_opt]
-  #start_param_log --start_opt
+  par0 <- start_opt[free_names_opt]
 
-  # 10. Optimización
+  # 10. Optimización ----
 
   time_fit <- system.time({
 
@@ -247,16 +245,31 @@ fit_blockpairwise <- function(y,
   par_hat_opt <- start_opt
   par_hat_opt[free_names_opt] <- opt$par
 
-  par_hat_nat <- bp_from_optim_scale(
-    par_opt = par_hat_opt,
-    beta_names = beta_names,
-    eps_nugget = eps_nugget
+
+  beta <- par_hat_opt[beta_names]
+
+  sill <- exp(unname(par_hat_opt["log_sill"]))
+  range    <- exp(unname(par_hat_opt["log_range"]))
+  nugget   <- exp(unname(par_hat_opt["log_nugget"])) - eps_nugget
+  smooth     <- exp(unname(par_hat_opt["log_smooth"]))
+
+  if (!is.finite(nugget)) {
+    nugget <- NA_real_
+  } else {
+    nugget <- max(nugget, 0)
+  }
+
+  par_hat <- c(
+    beta,
+    sill = sill,
+    range    = range,
+    nugget   = nugget,
+    smooth  = smooth
   )
 
-  par_hat_nat <- par_hat_nat[all_names]
-
-  beta_hat <- par_hat_nat[beta_names]
-  cov_hat  <- par_hat_nat[cov_names]
+  par_hat <- par_hat[all_names]
+  beta_hat <- par_hat[beta_names]
+  cov_hat  <- par_hat[cov_names]
 
   names(beta_hat) <- sub("^beta_", "", names(beta_hat))
 
@@ -265,7 +278,7 @@ fit_blockpairwise <- function(y,
   out <- list(
     call = match.call(),
 
-    par = par_hat_nat,
+    par = par_hat,
     par_optim_scale = par_hat_opt,
 
     coefficients = beta_hat,
@@ -275,8 +288,8 @@ fit_blockpairwise <- function(y,
     start_optim_scale = start_opt,
 
     fixed_param = fixed_param,
-    fixed_param_names = fixed_names_nat,
-    free_param_names = setdiff(all_names, fixed_names_nat),
+    fixed_param_names = fixed_param_names,
+    free_param_names = setdiff(all_names, fixed_param_names),
 
     value = opt$value,
     convergence = opt$convergence,
@@ -294,7 +307,6 @@ fit_blockpairwise <- function(y,
     fweight = fweight,
     nnk = nnk,
     w = w,
-
     eps_nugget = eps_nugget,
 
     time = time_fit[1:3],
@@ -571,14 +583,14 @@ bp_check_param <- function(start_param,
   invisible(TRUE)
 }
 
-make_objective_log <- function(start_param_log,
+make_objective_log <- function(start_opt,
                                free_names_opt,
                                beta_names,
                                storage_ptr,
                                likelihood,
                                eps_nugget) {
 
-  force(start_param_log)
+  force(start_opt)
   force(free_names_opt)
   force(beta_names)
   force(storage_ptr)
@@ -587,7 +599,7 @@ make_objective_log <- function(start_param_log,
 
   function(par_free_opt) {
 
-    par_opt <- start_param_log
+    par_opt <- start_opt
     par_opt[free_names_opt] <- par_free_opt
 
     beta <- par_opt[beta_names]
@@ -615,33 +627,33 @@ make_objective_log <- function(start_param_log,
       return(1e10)
     }
 
-    total_var <- sill + nugget
-    total_var2 <- total_var * total_var
+    t <- sill + nugget
+    t2 <- t * t
 
-    if (!is.finite(total_var) || !is.finite(total_var2) || total_var <= 0) {
+    if (!is.finite(t) || !is.finite(t2) || t <= 0 || t2 <= 0) {
       return(1e10)
     }
 
     val <- switch(
       likelihood,
 
-      marginal = bcl_gaussian_marginal_X_ptr(
+      marginal = bcl_gaussian_marginal_ptr(
         storage_ptr,
         as.numeric(beta),
         sill,
         range,
-        total_var,
-        total_var2,
+        t,
+        t2,
         smooth
       ),
 
-      conditional = bcl_gaussian_conditional_X_ptr(
+      conditional = bcl_gaussian_conditional_ptr(
         storage_ptr,
         as.numeric(beta),
         sill,
         range,
-        total_var,
-        total_var2,
+        t,
+        t2,
         smooth
       )
     )
@@ -655,156 +667,3 @@ make_objective_log <- function(start_param_log,
 }
 
 
-
-#---------------------------
-
-fit_blockpairwise <- function(data,
-                              par,
-                              lower,
-                              upper,
-                              fixed_par = NULL,
-                              free_idx = NULL,
-                              likelihood = c("marginal", "conditional"),
-                              cblocks = c("regular", "kmeans", "row", "col"),
-                              nblocks = 1L,
-                              fweight = c("nn", "dist"),
-                              nnk = NULL,
-                              w = NULL,
-                              method = "L-BFGS-B",
-                              precomp = NULL,
-                              control = list(),
-                              ...) {
-
-  likelihood <- match.arg(likelihood)
-  likelihood <- tolower(likelihood)
-  cblocks <- match.arg(cblocks)
-  fweight <- match.arg(fweight)
-
-  data <- validate_spatial_data(data)
-  validate_par(par)
-
-  if (is.null(fixed_par)) fixed_par <- par
-  if (is.null(free_idx)) free_idx <- seq_along(fixed_par)
-
-  if (length(lower) != length(fixed_par) || length(upper) != length(fixed_par)) {
-    stop("lower and upper must have the same length as par/fixed_par.", call. = FALSE)
-  }
-
-  if (is.null(precomp)) {
-    precomp <- prepare_bcl_data(
-      data = data,
-      cblocks = cblocks,
-      nblocks = nblocks,
-      fweight = fweight,
-      nnk = nnk,
-      w = w
-    )
-  } else {
-    if (!inherits(precomp, "bp_precomp")) {
-      stop("precomp must be an object created by prepare_bcl_data().", call. = FALSE)
-    }
-  }
-
-  cblocks <- precomp$cblocks
-  nblocks <- precomp$nblocks
-  fweight <- precomp$fweight
-  nnk <- precomp$nnk
-  w <- precomp$w
-
-  storage_ptr <- prepare_bcl_ptr(precomp)
-
-  objective <- make_objective(
-    fixed_par = fixed_par,
-    free_idx = free_idx,
-    storage_ptr = storage_ptr,
-    likelihood = likelihood
-  )
-
-  time_fit <- system.time({
-    opt <- stats::optim(
-      par = fixed_par[free_idx],
-      fn = objective,
-      method = method,
-      lower = lower[free_idx],
-      upper = upper[free_idx],
-      hessian = FALSE,
-      control = control,
-      ...
-    )
-  })
-
-  par_hat <- fixed_par
-  par_hat[free_idx] <- opt$par
-  names(par_hat) <- c("mu", "sigma2", "phi", "tau2", "nu")
-
-  out <- list(
-    call = match.call(),
-    par = par_hat,
-    opt = opt,
-    value = opt$value,
-    convergence = opt$convergence,
-    message = opt$message,
-    likelihood = likelihood,
-    cblocks = cblocks,
-    nblocks = nblocks,
-    fweight = fweight,
-    nnk = nnk,
-    w = w,
-    time = time_fit[1:3],
-    precomp = precomp
-  )
-
-  class(out) <- "bp_fit"
-  out
-}
-
-
-make_objective <- function(fixed_par, free_idx, storage_ptr, likelihood) {
-
-  force(fixed_par)
-  force(free_idx)
-  force(storage_ptr)
-  force(likelihood)
-
-  function(par_free) {
-
-    par_full <- fixed_par
-    par_full[free_idx] <- par_free
-
-    mu <- par_full[1]
-    sigma2 <- par_full[2]
-    phi <- par_full[3]
-    tau2 <- par_full[4]
-    nu <- par_full[5]
-
-    if (!is.finite(mu) ||
-        !is.finite(sigma2) ||
-        !is.finite(phi) ||
-        !is.finite(tau2) ||
-        !is.finite(nu) ||
-        sigma2 <= 0 ||
-        phi <= 0 ||
-        tau2 < 0 ||
-        nu <= 0) {
-      return(1e10)
-    }
-
-    t <- sigma2 + tau2
-    t2 <- t * t
-
-    val <- switch(
-      likelihood,
-      marginal = bcl_gaussian_marginal_ptr(
-        storage_ptr, mu, sigma2, phi, t, t2, nu
-      ),
-      conditional = bcl_gaussian_conditional_ptr(
-        storage_ptr, mu, sigma2, phi, t, t2, nu
-      ),
-      stop("Unknown likelihood type.", call. = FALSE)
-    )
-
-    if (!is.finite(val)) return(1e10)
-
-    val
-  }
-}

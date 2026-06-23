@@ -24,63 +24,80 @@ BEGIN_RCPP
 END_RCPP
 }
 // matern
-double matern(double d, double phi, double nu);
-RcppExport SEXP _blockpairwise_matern(SEXP dSEXP, SEXP phiSEXP, SEXP nuSEXP) {
+double matern(double d, double range, double smooth);
+RcppExport SEXP _blockpairwise_matern(SEXP dSEXP, SEXP rangeSEXP, SEXP smoothSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< double >::type d(dSEXP);
-    Rcpp::traits::input_parameter< double >::type phi(phiSEXP);
-    Rcpp::traits::input_parameter< double >::type nu(nuSEXP);
-    rcpp_result_gen = Rcpp::wrap(matern(d, phi, nu));
+    Rcpp::traits::input_parameter< double >::type range(rangeSEXP);
+    Rcpp::traits::input_parameter< double >::type smooth(smoothSEXP);
+    rcpp_result_gen = Rcpp::wrap(matern(d, range, smooth));
     return rcpp_result_gen;
 END_RCPP
 }
 // prepare_bcl_storage
-SEXP prepare_bcl_storage(Rcpp::List Z_list_R, Rcpp::List X_list_R, Rcpp::List valid_pairs_list_R, Rcpp::List dist_pairs_list_R);
-RcppExport SEXP _blockpairwise_prepare_bcl_storage(SEXP Z_list_RSEXP, SEXP X_list_RSEXP, SEXP valid_pairs_list_RSEXP, SEXP dist_pairs_list_RSEXP) {
+SEXP prepare_bcl_storage(Rcpp::List y_list_R, Rcpp::List X_list_R, Rcpp::List valid_pairs_list_R, Rcpp::List dist_pairs_list_R);
+RcppExport SEXP _blockpairwise_prepare_bcl_storage(SEXP y_list_RSEXP, SEXP X_list_RSEXP, SEXP valid_pairs_list_RSEXP, SEXP dist_pairs_list_RSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< Rcpp::List >::type Z_list_R(Z_list_RSEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type y_list_R(y_list_RSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type X_list_R(X_list_RSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type valid_pairs_list_R(valid_pairs_list_RSEXP);
     Rcpp::traits::input_parameter< Rcpp::List >::type dist_pairs_list_R(dist_pairs_list_RSEXP);
-    rcpp_result_gen = Rcpp::wrap(prepare_bcl_storage(Z_list_R, X_list_R, valid_pairs_list_R, dist_pairs_list_R));
+    rcpp_result_gen = Rcpp::wrap(prepare_bcl_storage(y_list_R, X_list_R, valid_pairs_list_R, dist_pairs_list_R));
     return rcpp_result_gen;
 END_RCPP
 }
 // bcl_gaussian_marginal_ptr
-double bcl_gaussian_marginal_ptr(SEXP ptr_, double mu, double sigma2, double phi, double t, double t2, double nu);
-RcppExport SEXP _blockpairwise_bcl_gaussian_marginal_ptr(SEXP ptr_SEXP, SEXP muSEXP, SEXP sigma2SEXP, SEXP phiSEXP, SEXP tSEXP, SEXP t2SEXP, SEXP nuSEXP) {
+double bcl_gaussian_marginal_ptr(SEXP ptr_, Rcpp::NumericVector beta, double sill, double range, double t, double t2, double smooth);
+RcppExport SEXP _blockpairwise_bcl_gaussian_marginal_ptr(SEXP ptr_SEXP, SEXP betaSEXP, SEXP sillSEXP, SEXP rangeSEXP, SEXP tSEXP, SEXP t2SEXP, SEXP smoothSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type ptr_(ptr_SEXP);
-    Rcpp::traits::input_parameter< double >::type mu(muSEXP);
-    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
-    Rcpp::traits::input_parameter< double >::type phi(phiSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< double >::type sill(sillSEXP);
+    Rcpp::traits::input_parameter< double >::type range(rangeSEXP);
     Rcpp::traits::input_parameter< double >::type t(tSEXP);
     Rcpp::traits::input_parameter< double >::type t2(t2SEXP);
-    Rcpp::traits::input_parameter< double >::type nu(nuSEXP);
-    rcpp_result_gen = Rcpp::wrap(bcl_gaussian_marginal_ptr(ptr_, mu, sigma2, phi, t, t2, nu));
+    Rcpp::traits::input_parameter< double >::type smooth(smoothSEXP);
+    rcpp_result_gen = Rcpp::wrap(bcl_gaussian_marginal_ptr(ptr_, beta, sill, range, t, t2, smooth));
     return rcpp_result_gen;
 END_RCPP
 }
 // bcl_gaussian_conditional_ptr
-double bcl_gaussian_conditional_ptr(SEXP ptr_, double mu, double sigma2, double phi, double t, double t2, double nu);
-RcppExport SEXP _blockpairwise_bcl_gaussian_conditional_ptr(SEXP ptr_SEXP, SEXP muSEXP, SEXP sigma2SEXP, SEXP phiSEXP, SEXP tSEXP, SEXP t2SEXP, SEXP nuSEXP) {
+double bcl_gaussian_conditional_ptr(SEXP ptr_, Rcpp::NumericVector beta, double sill, double range, double t, double t2, double smooth);
+RcppExport SEXP _blockpairwise_bcl_gaussian_conditional_ptr(SEXP ptr_SEXP, SEXP betaSEXP, SEXP sillSEXP, SEXP rangeSEXP, SEXP tSEXP, SEXP t2SEXP, SEXP smoothSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type ptr_(ptr_SEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericVector >::type beta(betaSEXP);
+    Rcpp::traits::input_parameter< double >::type sill(sillSEXP);
+    Rcpp::traits::input_parameter< double >::type range(rangeSEXP);
+    Rcpp::traits::input_parameter< double >::type t(tSEXP);
+    Rcpp::traits::input_parameter< double >::type t2(t2SEXP);
+    Rcpp::traits::input_parameter< double >::type smooth(smoothSEXP);
+    rcpp_result_gen = Rcpp::wrap(bcl_gaussian_conditional_ptr(ptr_, beta, sill, range, t, t2, smooth));
+    return rcpp_result_gen;
+END_RCPP
+}
+// bcl_gaussian_conditional_mu_ptr
+double bcl_gaussian_conditional_mu_ptr(SEXP ptr_, double mu, double sill, double range, double t, double t2, double smooth);
+RcppExport SEXP _blockpairwise_bcl_gaussian_conditional_mu_ptr(SEXP ptr_SEXP, SEXP muSEXP, SEXP sillSEXP, SEXP rangeSEXP, SEXP tSEXP, SEXP t2SEXP, SEXP smoothSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type ptr_(ptr_SEXP);
     Rcpp::traits::input_parameter< double >::type mu(muSEXP);
-    Rcpp::traits::input_parameter< double >::type sigma2(sigma2SEXP);
-    Rcpp::traits::input_parameter< double >::type phi(phiSEXP);
+    Rcpp::traits::input_parameter< double >::type sill(sillSEXP);
+    Rcpp::traits::input_parameter< double >::type range(rangeSEXP);
     Rcpp::traits::input_parameter< double >::type t(tSEXP);
     Rcpp::traits::input_parameter< double >::type t2(t2SEXP);
-    Rcpp::traits::input_parameter< double >::type nu(nuSEXP);
-    rcpp_result_gen = Rcpp::wrap(bcl_gaussian_conditional_ptr(ptr_, mu, sigma2, phi, t, t2, nu));
+    Rcpp::traits::input_parameter< double >::type smooth(smoothSEXP);
+    rcpp_result_gen = Rcpp::wrap(bcl_gaussian_conditional_mu_ptr(ptr_, mu, sill, range, t, t2, smooth));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -91,6 +108,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_blockpairwise_prepare_bcl_storage", (DL_FUNC) &_blockpairwise_prepare_bcl_storage, 4},
     {"_blockpairwise_bcl_gaussian_marginal_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_marginal_ptr, 7},
     {"_blockpairwise_bcl_gaussian_conditional_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_conditional_ptr, 7},
+    {"_blockpairwise_bcl_gaussian_conditional_mu_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_conditional_mu_ptr, 7},
     {NULL, NULL, 0}
 };
 

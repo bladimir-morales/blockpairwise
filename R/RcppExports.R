@@ -5,19 +5,23 @@ assemble_pairs <- function(nn_idx, nn_dists, nnk) {
     .Call(`_blockpairwise_assemble_pairs`, nn_idx, nn_dists, nnk)
 }
 
-matern <- function(d, phi, nu) {
-    .Call(`_blockpairwise_matern`, d, phi, nu)
+matern <- function(d, range, smooth) {
+    .Call(`_blockpairwise_matern`, d, range, smooth)
 }
 
-prepare_bcl_storage <- function(Z_list_R, X_list_R, valid_pairs_list_R, dist_pairs_list_R) {
-    .Call(`_blockpairwise_prepare_bcl_storage`, Z_list_R, X_list_R, valid_pairs_list_R, dist_pairs_list_R)
+prepare_bcl_storage <- function(y_list_R, X_list_R, valid_pairs_list_R, dist_pairs_list_R) {
+    .Call(`_blockpairwise_prepare_bcl_storage`, y_list_R, X_list_R, valid_pairs_list_R, dist_pairs_list_R)
 }
 
-bcl_gaussian_marginal_ptr <- function(ptr_, mu, sigma2, phi, t, t2, nu) {
-    .Call(`_blockpairwise_bcl_gaussian_marginal_ptr`, ptr_, mu, sigma2, phi, t, t2, nu)
+bcl_gaussian_marginal_ptr <- function(ptr_, beta, sill, range, t, t2, smooth) {
+    .Call(`_blockpairwise_bcl_gaussian_marginal_ptr`, ptr_, beta, sill, range, t, t2, smooth)
 }
 
-bcl_gaussian_conditional_ptr <- function(ptr_, mu, sigma2, phi, t, t2, nu) {
-    .Call(`_blockpairwise_bcl_gaussian_conditional_ptr`, ptr_, mu, sigma2, phi, t, t2, nu)
+bcl_gaussian_conditional_ptr <- function(ptr_, beta, sill, range, t, t2, smooth) {
+    .Call(`_blockpairwise_bcl_gaussian_conditional_ptr`, ptr_, beta, sill, range, t, t2, smooth)
+}
+
+bcl_gaussian_conditional_mu_ptr <- function(ptr_, mu, sill, range, t, t2, smooth) {
+    .Call(`_blockpairwise_bcl_gaussian_conditional_mu_ptr`, ptr_, mu, sill, range, t, t2, smooth)
 }
 

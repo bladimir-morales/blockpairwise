@@ -12,7 +12,7 @@
 #' @export
 prepare_bcl_data <- function(y,
                              coords,
-                             X,
+                             X=NULL,
                              cblocks = c("regular", "kmeans", "row", "col"),
                              nblocks = 1L,
                              fweight = c("nn", "dist"),
@@ -21,6 +21,34 @@ prepare_bcl_data <- function(y,
 
   cblocks <- match.arg(cblocks)
   fweight <- match.arg(fweight)
+
+  y <- as.numeric(y)
+  coords <- as.matrix(coords)
+
+  n <- length(y)
+
+  if (nrow(coords) != n) {
+    stop("nrow(coords) must be equal to length(y).", call. = FALSE)
+  }
+
+  if (is.null(X)) {
+    X <- matrix(1.0, nrow = n, ncol = 1L)
+    colnames(X) <- "Intercept"
+  } else {
+    X <- as.matrix(X)
+
+    if (!is.numeric(X)) {
+      stop("X must be numeric.", call. = FALSE)
+    }
+
+    if (nrow(X) != n) {
+      stop("nrow(X) must be equal to length(y).", call. = FALSE)
+    }
+
+    if (any(!is.finite(X))) {
+      stop("X contains non-finite values.", call. = FALSE)
+    }
+  }
 
   sblocks <- set_idblocks_pairslist(
     coords = coords,
@@ -36,8 +64,8 @@ prepare_bcl_data <- function(y,
     valid_pairs = lapply(sblocks$pairs_list, `[[`, "valid_pairs"),
     dist_pairs = lapply(sblocks$pairs_list, `[[`, "dist_pairs"),
     yk = lapply(sblocks$id_blocks, function(idx) y[idx]),
-    coordsk = lapply(sblocks$id_blocks, function(idx) coords[idx,]),
-    Xk = if(!is.null(X)) lapply(sblocks$id_blocks, function(idx) X[idx,]),
+    coordsk = lapply(sblocks$id_blocks, function(idx) coords[idx, , drop = FALSE]),
+    Xk = lapply(sblocks$id_blocks, function(idx) X[idx, , drop = FALSE]),
     groups = sblocks$groups,
     nblocks = length(sblocks$id_blocks),
     block_sizes = lengths(sblocks$id_blocks),
@@ -55,7 +83,7 @@ prepare_bcl_data <- function(y,
 
 prepare_bcl_ptr <- function(precomp) {
   prepare_bcl_storage(
-    Z_list_R = precomp$yk,
+    y_list_R = precomp$yk,
     X_list_R = precomp$Xk,
     valid_pairs_list_R = precomp$valid_pairs,
     dist_pairs_list_R = precomp$dist_pairs
