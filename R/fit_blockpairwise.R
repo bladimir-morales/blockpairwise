@@ -1,21 +1,26 @@
 #' Fit Gaussian block-pairwise composite likelihood
 #'
-#' @param data data.frame or matrix with columns x, y, z.
-#' @param par numeric vector c(mu, sigma2, phi, tau2, nu).
-#' @param lower lower bounds for optimization.
-#' @param upper upper bounds for optimization.
-#' @param fixed_par optional full parameter vector. If NULL, uses par.
-#' @param free_idx indices of parameters to estimate.
-#' @param likelihood "marginal" or "conditional".
+#' @param y numeric response vector.
+#' @param coords numeric matrix/data.frame of spatial coordinates.
+#' @param X optional design matrix. If NULL, an intercept-only model is used.
+#' @param start_beta optional initial beta vector.
+#' @param start_cov optional named vector with covariance starts:
+#'   sill, range, nugget, smooth.
+#' @param fixed_param optional named vector of fixed parameters.
+#' @param likelihood "conditional" or "marginal".
+#' @param optimizer optimization method passed to stats::optim().
+#' @param par_scale "natural" or "log".
 #' @param cblocks block construction method.
-#' @param nblocks number of spatial blocks.
+#' @param nblocks number of blocks.
 #' @param fweight pair construction method: "nn" or "dist".
-#' @param nnk number of nearest neighbours, used if fweight = "nn".
-#' @param w distance cut-off, used if fweight = "dist".
-#' @param method optimization method.
-#' @param precomp optional precomputed block-pairwise data.
-#' @param control optional list passed to optim().
-#' @param ... additional arguments passed to optim().
+#' @param nnk number of nearest neighbours if fweight = "nn".
+#' @param w distance cut-off if fweight = "dist".
+#' @param precomp optional object created by prepare_bcl_data().
+#' @param lower lower bounds in optimization scale.
+#' @param upper upper bounds in optimization scale.
+#' @param eps_nugget small constant used only for log-nugget transformation.
+#' @param control list passed to stats::optim().
+#' @param ... additional arguments passed to stats::optim().
 #'
 #' @return Object of class "bp_fit".
 #' @export
@@ -26,7 +31,7 @@ fit_blockpairwise <- function(y,
                               start_cov = NULL,
                               fixed_param = NULL,
                               likelihood = c("conditional", "marginal"),
-                              optimizer = c("L-BFGS-B", "BFGS", "Nelder-Mead", "CG", "nlminb"),
+                              optimizer = c("L-BFGS-B", "BFGS", "Nelder-Mead", "CG"),
                               par_scale = c("natural", "log"),
                               cblocks = c("regular", "kmeans", "row", "col"),
                               nblocks = 1L,
@@ -37,7 +42,7 @@ fit_blockpairwise <- function(y,
                               lower = NULL,
                               upper = NULL,
                               eps_nugget = 1e-10,
-                              control = NULL,
+                              control = list(),
                               ...) {
 
   likelihood <- match.arg(likelihood)
@@ -46,8 +51,9 @@ fit_blockpairwise <- function(y,
   cblocks    <- match.arg(cblocks)
   fweight    <- match.arg(fweight)
 
-
-  # 1. Validación de y
+  # ------------------------------------------------------------
+  # 1. Response
+  # ------------------------------------------------------------
 
   y <- as.numeric(y)
 
@@ -61,8 +67,9 @@ fit_blockpairwise <- function(y,
 
   n <- length(y)
 
-
-  # 2. Validación de coords
+  # ------------------------------------------------------------
+  # 2. Coordinates
+  # ------------------------------------------------------------
 
   coords <- as.matrix(coords)
 
@@ -82,8 +89,9 @@ fit_blockpairwise <- function(y,
     stop("coords contains non-finite values.", call. = FALSE)
   }
 
-
-  # 3. Matriz de diseño
+  # ------------------------------------------------------------
+  # 3. Design matrix
+  # ------------------------------------------------------------
 
   if (is.null(X)) {
 
@@ -107,7 +115,8 @@ fit_blockpairwise <- function(y,
     }
 
     if (is.null(colnames(X))) {
-      colnames(X) <- c("Intercept", paste0("x", seq_len(ncol(X) - 1L)))
+      colnames(X) <- paste0("x", seq_len(ncol(X)))
+      colnames(X)[1L] <- "Intercept"
     }
   }
 
@@ -117,8 +126,9 @@ fit_blockpairwise <- function(y,
   cov_names  <- c("sill", "range", "nugget", "smooth")
   all_names  <- c(beta_names, cov_names)
 
-
-  # 4. Parámetros iniciales naturales
+  # ------------------------------------------------------------
+  # 4. Starting values in natural scale
+  # ------------------------------------------------------------
 
   start_param <- bp_make_start_param(
     y = y,
@@ -133,8 +143,9 @@ fit_blockpairwise <- function(y,
 
   start_param <- start_param[all_names]
 
-
-  # 5. Parámetros fijos
+  # ------------------------------------------------------------
+  # 5. Fixed parameters
+  # ------------------------------------------------------------
 
   if (!is.null(fixed_param)) {
 
@@ -172,8 +183,9 @@ fit_blockpairwise <- function(y,
     cov_names = cov_names
   )
 
-
-  # 6. Escala de optimización ----
+  # ------------------------------------------------------------
+  # 6. Optimization scale
+  # ------------------------------------------------------------
 
   start_opt <- make_start_opt(
     start_param = start_param,
@@ -196,22 +208,22 @@ fit_blockpairwise <- function(y,
 
   par0 <- start_opt[free_names_opt]
 
-
-  # 7. Bounds ----
+  # ------------------------------------------------------------
+  # 7. Bounds
+  # ------------------------------------------------------------
 
   bounds <- normalize_bounds(
     lower = lower,
     upper = upper,
-    free_names_opt = free_names_opt,
-    par_scale = par_scale,
-    eps_nugget = eps_nugget
+    free_names_opt = free_names_opt
   )
 
   lower_opt <- bounds$lower
   upper_opt <- bounds$upper
 
-
-  # 8. Precomputación ----
+  # ------------------------------------------------------------
+  # 8. Precomputation
+  # ------------------------------------------------------------
 
   if (is.null(precomp)) {
 
@@ -229,17 +241,16 @@ fit_blockpairwise <- function(y,
   } else {
 
     if (!inherits(precomp, "bp_precomp")) {
-      stop(
-        "precomp must be an object created by prepare_bcl_data().",
-        call. = FALSE
-      )
+      stop("precomp must be an object created by prepare_bcl_data().",
+           call. = FALSE)
     }
   }
 
   storage_ptr <- prepare_bcl_ptr(precomp)
 
-
-  # 9. Objetivo ----
+  # ------------------------------------------------------------
+  # 9. Objective function
+  # ------------------------------------------------------------
 
   objective <- make_objective_bcl(
     start_opt = start_opt,
@@ -259,75 +270,22 @@ fit_blockpairwise <- function(y,
     objective(par_free_opt)
   }
 
-
-  # 10. Controles por defecto ----
-
-  if (optimizer == "L-BFGS-B") {
-
-    if (par_scale == "log") {
-
-      if (is.null(control$factr)) {
-        control$factr <- 1e8
-      }
-
-      if (is.null(control$pgtol)) {
-        control$pgtol <- 1e-4
-      }
-
-      if (is.null(control$ndeps)) {
-        control$ndeps <- rep(1e-3, length(par0))
-      }
-
-      if (is.null(control$maxit)) {
-        control$maxit <- 100L
-      }
-
-    } else {
-
-      # Escala natural: preservar comportamiento tipo main.
-      if (is.null(control$maxit)) {
-        control$maxit <- 100L
-      }
-
-      # No fijar ndeps automáticamente en escala natural.
-      # No fijar factr/pgtol automáticamente si buscas reproducir main.
-    }
-  }
-
-
-  # 11. Optimización
+  # ------------------------------------------------------------
+  # 10. Optimization
+  # ------------------------------------------------------------
 
   time_fit <- system.time({
 
-    if (optimizer == "nlminb") {
+    if (optimizer == "L-BFGS-B") {
 
-      opt_raw <- stats::nlminb(
-        start = par0,
-        objective = objective_counted,
+      opt <- stats::optim(
+        par = par0,
+        fn = objective_counted,
+        method = optimizer,
         lower = lower_opt,
         upper = upper_opt,
-        control = modifyList(
-          list(
-            eval.max = 120L,
-            iter.max = 80L,
-            rel.tol = 1e-6,
-            x.tol = 1e-5
-          ),
-          control
-        ),
+        control = control,
         ...
-      )
-
-      opt <- list(
-        par = opt_raw$par,
-        value = opt_raw$objective,
-        counts = c(
-          "function" = unname(opt_raw$evaluations["function"]),
-          "gradient" = unname(opt_raw$evaluations["gradient"])
-        ),
-        convergence = opt_raw$convergence,
-        message = opt_raw$message,
-        raw = opt_raw
       )
 
     } else {
@@ -336,8 +294,7 @@ fit_blockpairwise <- function(y,
         par = par0,
         fn = objective_counted,
         method = optimizer,
-        #lower = if (optimizer == "L-BFGS-B") lower_opt else -Inf,
-        #upper = if (optimizer == "L-BFGS-B") upper_opt else Inf,
+        control = control,
         ...
       )
     }
@@ -345,7 +302,9 @@ fit_blockpairwise <- function(y,
 
   n_eval_real <- eval_env$n
 
-  # 12. Reconstrucción
+  # ------------------------------------------------------------
+  # 11. Decode fitted parameters
+  # ------------------------------------------------------------
 
   par_hat_opt <- start_opt
   par_hat_opt[free_names_opt] <- opt$par
@@ -365,8 +324,9 @@ fit_blockpairwise <- function(y,
 
   names(beta_hat) <- sub("^beta_", "", names(beta_hat))
 
-
-  # 13. Salida
+  # ------------------------------------------------------------
+  # 12. Output
+  # ------------------------------------------------------------
 
   out <- list(
     call = match.call(),
@@ -421,6 +381,7 @@ fit_blockpairwise <- function(y,
   out
 }
 
+
 make_start_opt <- function(start_param,
                            beta_names,
                            par_scale = c("natural", "log"),
@@ -452,6 +413,7 @@ make_start_opt <- function(start_param,
   out
 }
 
+
 map_fixed_to_opt <- function(fixed_param_names,
                              par_scale = c("natural", "log")) {
 
@@ -468,6 +430,7 @@ map_fixed_to_opt <- function(fixed_param_names,
 
   out
 }
+
 
 decode_opt_param <- function(par_opt,
                              beta_names,
@@ -517,38 +480,45 @@ decode_opt_param <- function(par_opt,
   )
 }
 
+
 normalize_bounds <- function(lower,
                              upper,
-                             free_names_opt,
-                             par_scale = c("natural", "log"),
-                             eps_nugget = 1e-10) {
-
-  par_scale <- match.arg(par_scale)
+                             free_names_opt) {
 
   if (is.null(lower)) {
+
     lower_opt <- rep(-Inf, length(free_names_opt))
     names(lower_opt) <- free_names_opt
+
   } else {
 
-    lower <- as.numeric(lower) |> stats::setNames(names(lower))
+    lower_names <- names(lower)
 
-    if (is.null(names(lower))) {
+    if (is.null(lower_names)) {
       stop("lower must be a named numeric vector.", call. = FALSE)
     }
+
+    lower <- as.numeric(lower)
+    names(lower) <- lower_names
 
     lower_opt <- lower[free_names_opt]
   }
 
   if (is.null(upper)) {
+
     upper_opt <- rep(Inf, length(free_names_opt))
     names(upper_opt) <- free_names_opt
+
   } else {
 
-    upper <- as.numeric(upper) |> stats::setNames(names(upper))
+    upper_names <- names(upper)
 
-    if (is.null(names(upper))) {
+    if (is.null(upper_names)) {
       stop("upper must be a named numeric vector.", call. = FALSE)
     }
+
+    upper <- as.numeric(upper)
+    names(upper) <- upper_names
 
     upper_opt <- upper[free_names_opt]
   }
@@ -570,7 +540,8 @@ normalize_bounds <- function(lower,
   }
 
   if (any(lower_opt >= upper_opt)) {
-    stop("Each lower bound must be strictly smaller than its upper bound.", call. = FALSE)
+    stop("Each lower bound must be strictly smaller than its upper bound.",
+         call. = FALSE)
   }
 
   list(
@@ -593,7 +564,9 @@ bp_make_start_param <- function(y,
 
   all_names <- c(beta_names, cov_names)
 
-  # 1. Validación de fixed_param
+  # ------------------------------------------------------------
+  # 1. Fixed parameters
+  # ------------------------------------------------------------
 
   if (!is.null(fixed_param)) {
 
@@ -627,7 +600,9 @@ bp_make_start_param <- function(y,
   free_beta_names <- setdiff(beta_names, fixed_names)
   free_cov_names  <- setdiff(cov_names, fixed_names)
 
-  # 2. Inicialización de beta
+  # ------------------------------------------------------------
+  # 2. Beta starts
+  # ------------------------------------------------------------
 
   beta0 <- rep(NA_real_, p_beta)
   names(beta0) <- beta_names
@@ -637,10 +612,8 @@ bp_make_start_param <- function(y,
     start_beta <- as.numeric(start_beta)
 
     if (length(start_beta) != p_beta) {
-      stop(
-        "length(start_beta) must be equal to ncol(X).",
-        call. = FALSE
-      )
+      stop("length(start_beta) must be equal to ncol(X).",
+           call. = FALSE)
     }
 
     if (any(!is.finite(start_beta))) {
@@ -651,7 +624,6 @@ bp_make_start_param <- function(y,
 
   } else {
 
-    # Solo estimamos beta automáticamente si existe al menos un beta libre.
     if (length(free_beta_names) > 0L) {
 
       beta_lm <- tryCatch(
@@ -664,18 +636,17 @@ bp_make_start_param <- function(y,
     }
   }
 
-  # Si algún beta está fijo, se impone el valor fijo.
   fixed_beta_names <- intersect(beta_names, fixed_names)
 
   if (length(fixed_beta_names) > 0L) {
     beta0[fixed_beta_names] <- fixed_param[fixed_beta_names]
   }
 
-  # Si quedan betas NA, se ponen en cero.
-  # Esto puede ocurrir si todos los beta están fijos o si lm.fit falla.
   beta0[is.na(beta0)] <- 0
 
-  # 3. Residuales baratos para inicializar varianza
+  # ------------------------------------------------------------
+  # 3. Residual variance start
+  # ------------------------------------------------------------
 
   residuals0 <- as.numeric(y - X %*% beta0)
 
@@ -689,9 +660,10 @@ bp_make_start_param <- function(y,
     v0 <- 1
   }
 
-  # 4. Inicialización barata del rango
+  # ------------------------------------------------------------
+  # 4. Cheap spatial range start
+  # ------------------------------------------------------------
 
-  # No usar stats::dist(coords): eso es O(n^2).
   coord_range <- apply(coords, 2L, function(z) {
     max(z) - min(z)
   })
@@ -708,7 +680,9 @@ bp_make_start_param <- function(y,
     range0 <- 1
   }
 
-  # 5. Inicialización de covarianza
+  # ------------------------------------------------------------
+  # 5. Covariance starts
+  # ------------------------------------------------------------
 
   cov0 <- c(
     sill   = NA_real_,
@@ -717,7 +691,6 @@ bp_make_start_param <- function(y,
     smooth = NA_real_
   )
 
-  # Solo generamos automáticos para parámetros no fijos.
   if ("sill" %in% free_cov_names) {
     cov0["sill"] <- 0.8 * v0
   }
@@ -733,8 +706,6 @@ bp_make_start_param <- function(y,
   if ("smooth" %in% free_cov_names) {
     cov0["smooth"] <- 0.5
   }
-
-  # 6. Sobrescritura con start_cov
 
   if (!is.null(start_cov)) {
 
@@ -761,15 +732,11 @@ bp_make_start_param <- function(y,
     cov0[names(start_cov)] <- start_cov
   }
 
-  # 7. Imponer parámetros fijos
-
   fixed_cov_names <- intersect(cov_names, fixed_names)
 
   if (length(fixed_cov_names) > 0L) {
     cov0[fixed_cov_names] <- fixed_param[fixed_cov_names]
   }
-
-  # 8. Valores fallback por seguridad
 
   if (is.na(cov0["sill"])) {
     cov0["sill"] <- 0.8 * v0
@@ -787,12 +754,10 @@ bp_make_start_param <- function(y,
     cov0["smooth"] <- 0.5
   }
 
-  out <- c(
+  c(
     beta0,
     cov0[cov_names]
   )
-
-  out
 }
 
 
@@ -841,6 +806,7 @@ bp_check_param <- function(start_param,
 
   invisible(TRUE)
 }
+
 
 make_objective_bcl <- function(start_opt,
                                free_names_opt,
