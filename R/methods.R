@@ -7,9 +7,10 @@ print.bp_fit <- function(x, ...) {
   cat("Block-pairwise Gaussian fit\n")
   cat("Likelihood:", x$likelihood, "\n")
   cat("Blocks:", x$nblocks, "using", x$cblocks, "\n")
-  cat("Pair rule:", x$fweight, "\n\n")
+  cat("Pair rule:", x$nnk,x$fweight, "\n\n")
+  cat("Estimators:", "\n\n")
   print(x$par)
-  cat("\nObjective value:", x$value, "\n")
+  cat("\nBlock-pairwise log-likelihood:", x$loglik, "\n")
   cat("Convergence code:", x$convergence, "\n")
   invisible(x)
 }
@@ -23,6 +24,7 @@ print.bp_fit <- function(x, ...) {
 summary.bp_fit <- function(object, ...) {
   out <- list(
     par = object$par,
+    loglik = object$loglik,
     value = object$value,
     convergence = object$convergence,
     message = object$message,
@@ -45,7 +47,7 @@ summary.bp_fit <- function(object, ...) {
 print.summary.bp_fit <- function(x, ...) {
   cat("Summary of block-pairwise Gaussian fit\n\n")
   print(x$par)
-  cat("\nObjective value:", x$value, "\n")
+  cat("\nBlock-pairwise log-likelihood:", x$loglik, "\n")
   cat("Convergence code:", x$convergence, "\n")
   if (!is.null(x$message)) cat("Message:", x$message, "\n")
   cat("\nElapsed time:\n")

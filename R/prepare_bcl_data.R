@@ -1,6 +1,8 @@
 #' Prepare block-pairwise data
 #'
-#' @param data data.frame or matrix with columns x, y, z.
+#' @param y numeric response vector.
+#' @param coords numeric matrix/data.frame of spatial coordinates.
+#' @param X optional design matrix. If NULL, an intercept-only model is used.
 #' @param cblocks block construction method.
 #' @param nblocks number of spatial blocks.
 #' @param fweight pair construction method: "nn" or "dist".

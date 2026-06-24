@@ -297,7 +297,23 @@ fit_blockpairwise <- function(y,
   names(beta_hat) <- sub("^beta_", "", names(beta_hat))
 
 
-  # 12. Output ----
+  # 12 loglik computation ----
+
+  n_pairs <- get_bcl_n_pairs(precomp)
+
+  dim_pair <- switch(
+    likelihood,
+    conditional = 1,
+    marginal = 2
+  )
+
+  gaussian_constant <- n_pairs * dim_pair * log(2 * pi)
+
+  neg2loglik <- opt$value + gaussian_constant
+  loglik <- -0.5 * neg2loglik
+
+
+  # 13. Output ----
 
   out <- list(
     call = match.call(),
@@ -323,6 +339,8 @@ fit_blockpairwise <- function(y,
     value = opt$value,
     convergence = opt$convergence,
     message = opt$message,
+
+    loglik = loglik,
 
     likelihood = likelihood,
     optimizer = optimizer,
@@ -860,4 +878,52 @@ make_objective_bcl <- function(start_opt,
 
     val
   }
+}
+
+get_bcl_n_pairs <- function(bcl_data) {
+
+  if (!is.null(bcl_data$n_pairs)) {
+    return(sum(as.numeric(bcl_data$n_pairs)))
+  }
+
+  if (!is.null(bcl_data$valid_pairs)) {
+
+    n_pairs <- vapply(
+      bcl_data$valid_pairs,
+      function(x) {
+
+        if (is.null(x)) {
+          return(0)
+        }
+
+        if (is.matrix(x) || is.data.frame(x)) {
+          return(nrow(x))
+        }
+
+        if (is.list(x) && all(c("i", "j") %in% names(x))) {
+          return(length(x$i))
+        }
+
+        if (is.vector(x)) {
+          return(length(x) / 2)
+        }
+
+        stop("Unable to infer the number of pairs from valid_pairs.",
+             call. = FALSE)
+      },
+      numeric(1L)
+    )
+
+    return(sum(n_pairs))
+  }
+
+  if (!is.null(bcl_data$dist_pairs)) {
+    return(sum(vapply(bcl_data$dist_pairs, length, numeric(1L))))
+  }
+
+  stop(
+    "Unable to determine the number of block-pairs. ",
+    "bcl_data must contain n_pairs, valid_pairs, or dist_pairs.",
+    call. = FALSE
+  )
 }
