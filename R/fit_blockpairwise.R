@@ -89,32 +89,7 @@ fit_blockpairwise <- function(y,
 
   # 3. Design matrix validation
 
-  if (is.null(X)) {
-
-    X <- matrix(1.0, nrow = n, ncol = 1L)
-    colnames(X) <- "Intercept"
-
-  } else {
-
-    X <- as.matrix(X)
-
-    if (!is.numeric(X)) {
-      stop("X must be numeric.", call. = FALSE)
-    }
-
-    if (nrow(X) != n) {
-      stop("nrow(X) must be equal to length(y).", call. = FALSE)
-    }
-
-    if (any(!is.finite(X))) {
-      stop("X contains non-finite values.", call. = FALSE)
-    }
-
-    if (is.null(colnames(X))) {
-      colnames(X) <- paste0("x", seq_len(ncol(X)))
-      colnames(X)[1L] <- "Intercept"
-    }
-  }
+  X <- bp_build_design_matrix(X, n)
 
   p_beta <- ncol(X)
 
@@ -308,9 +283,7 @@ fit_blockpairwise <- function(y,
 
   gaussian_constant <- n_pairs * dim_pair * log(2 * pi)
 
-  neg2loglik <- opt$value + gaussian_constant
-  loglik <- -0.5 * neg2loglik
-
+  loglik <- -(opt$value + 0.5 * gaussian_constant)
 
   # 13. Output ----
 

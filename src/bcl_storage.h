@@ -3,6 +3,7 @@
 
 #include <Rcpp.h>
 #include <vector>
+#include <utility>
 
 struct BCLStorage {
 

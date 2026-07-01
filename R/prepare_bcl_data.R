@@ -29,27 +29,18 @@ prepare_bcl_data <- function(y,
 
   n <- length(y)
 
-  if (nrow(coords) != n) {
-    stop("nrow(coords) must be equal to length(y).", call. = FALSE)
+  X <- bp_build_design_matrix(X, n)
+
+  if (length(y) < 2L) {
+    stop("y must contain at least two observations.", call. = FALSE)
   }
 
-  if (is.null(X)) {
-    X <- matrix(1.0, nrow = n, ncol = 1L)
-    colnames(X) <- "Intercept"
-  } else {
-    X <- as.matrix(X)
+  if (any(!is.finite(y))) {
+    stop("y contains non-finite values.", call. = FALSE)
+  }
 
-    if (!is.numeric(X)) {
-      stop("X must be numeric.", call. = FALSE)
-    }
-
-    if (nrow(X) != n) {
-      stop("nrow(X) must be equal to length(y).", call. = FALSE)
-    }
-
-    if (any(!is.finite(X))) {
-      stop("X contains non-finite values.", call. = FALSE)
-    }
+  if (nrow(coords) != n) {
+    stop("nrow(coords) must be equal to length(y).", call. = FALSE)
   }
 
   sblocks <- set_idblocks_pairslist(

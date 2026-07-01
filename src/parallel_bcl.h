@@ -57,28 +57,17 @@ struct BlockPairwiseWorker : public RcppParallel::Worker {
 
       std::vector<double> ek(nk);
 
-      if (p == 1) {
+      for (std::size_t i = 0; i < nk; ++i) {
 
-        const double beta0 = contrib.beta[0];
+        const double* Xi = &Xk[i * static_cast<std::size_t>(p)];
 
-        for (std::size_t i = 0; i < nk; ++i) {
-          ek[i] = yk[i] - beta0;
+        double mui = 0.0;
+
+        for (int q = 0; q < p; ++q) {
+          mui += Xi[q] * contrib.beta[static_cast<std::size_t>(q)];
         }
 
-      } else {
-
-        for (std::size_t i = 0; i < nk; ++i) {
-
-          const double* Xi = &Xk[i * static_cast<std::size_t>(p)];
-
-          double mui = 0.0;
-
-          for (int q = 0; q < p; ++q) {
-            mui += Xi[q] * contrib.beta[static_cast<std::size_t>(q)];
-          }
-
-          ek[i] = yk[i] - mui;
-        }
+        ek[i] = yk[i] - mui;
       }
 
       for (std::size_t i = 0; i < n_pairs; ++i) {

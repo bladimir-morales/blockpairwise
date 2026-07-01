@@ -23,7 +23,7 @@ Numeric value of the Gaussian block-pairwise negative composite
   log-likelihood.
 }
 \description{
-Evaluates the Gaussian block-pairwise composite negative log-likelihood
+Evaluates the Gaussian block-pairwise composite log-likelihood
 for a given regression parameter vector and covariance parameter vector.
 }
 \details{
