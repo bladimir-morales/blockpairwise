@@ -4,10 +4,14 @@
 \alias{make_block}
 \title{Creating block labels}
 \usage{
-make_block(data, cblocks = c("regular", "kmeans", "row", "col"), nblocks = 1L)
+make_block(
+  coords,
+  cblocks = c("regular", "kmeans", "row", "col"),
+  nblocks = 1L
+)
 }
 \arguments{
-\item{data}{data.frame or matrix with columns x, y, z.}
+\item{coords}{location coordinates.}
 
 \item{cblocks}{block construction method.}
 
