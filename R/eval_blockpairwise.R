@@ -1,6 +1,6 @@
 #' Evaluate Gaussian block-pairwise composite likelihood
 #'
-#' Evaluates the Gaussian block-pairwise composite negative log-likelihood
+#' Evaluates the Gaussian block-pairwise composite log-likelihood
 #' for a given regression parameter vector and covariance parameter vector.
 #'
 #' The mean structure is
@@ -159,9 +159,7 @@ eval_blockpairwise <- function(beta,
 
   const <- n_pairs * dim_pair * log(2 * pi)
 
-  neg2loglik <- val + const
-
-  loglik <- -0.5 * neg2loglik
+  loglik <- -(val + 0.5 * const)
 
   if (!is.finite(loglik)) {
     stop("The block-pairwise likelihood evaluation returned a non-finite value.",

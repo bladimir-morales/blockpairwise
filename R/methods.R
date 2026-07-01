@@ -77,7 +77,7 @@ coef.bp_fit <- function(object, ...) {
 #' @export
 logLik.bp_fit <- function(object, ...) {
 
-  val <- -object$value
+  val <- object$loglik
 
   attr(val, "df") <- length(object$par)
   attr(val, "nobs") <- object$nobs %||% NA_integer_

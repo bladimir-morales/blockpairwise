@@ -20,3 +20,49 @@ validate_par <- function(par) {
 
   invisible(TRUE)
 }
+
+bp_build_design_matrix <- function(X, n) {
+
+  if (is.null(X)) {
+
+    X <- matrix(1.0, nrow = n, ncol = 1L)
+    colnames(X) <- "Intercept"
+    return(X)
+  }
+
+  X <- as.matrix(X)
+
+  if (!is.numeric(X)) {
+    stop("X must be numeric.", call. = FALSE)
+  }
+
+  if (nrow(X) != n) {
+    stop("nrow(X) must be equal to length(y).", call. = FALSE)
+  }
+
+  if (ncol(X) < 1L) {
+    stop("X must have at least one column.", call. = FALSE)
+  }
+
+  if (any(!is.finite(X))) {
+    stop("X contains non-finite values.", call. = FALSE)
+  }
+
+  if (is.null(colnames(X))) {
+    colnames(X) <- paste0("x", seq_len(ncol(X)))
+  }
+
+  has_intercept <- any(vapply(
+    seq_len(ncol(X)),
+    function(j) all(abs(X[, j] - 1.0) < sqrt(.Machine$double.eps)),
+    logical(1L)
+  ))
+
+  if (!has_intercept) {
+    X <- cbind(Intercept = 1.0, X)
+  }
+
+  storage.mode(X) <- "double"
+
+  X
+}
