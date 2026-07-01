@@ -2,21 +2,37 @@
 % Please edit documentation in R/eval_blockpairwise.R
 \name{eval_blockpairwise}
 \alias{eval_blockpairwise}
-\title{Evaluate block-pairwise composite likelihood}
+\title{Evaluate Gaussian block-pairwise composite likelihood}
 \usage{
-eval_blockpairwise(par, bcl_data, type = c("marginal", "conditional"))
+eval_blockpairwise(beta, cov, bcl_data, type = c("marginal", "conditional"))
 }
 \arguments{
-\item{par}{Numeric vector with parameters named `mu`,`sigma2`,`phi`,`tau2`, and `nu`.}
+\item{beta}{Numeric vector of regression coefficients. Its length must match
+the number of columns of the design matrix used in [prepare_bcl_data()].
+For an intercept-only model, use a scalar value, e.g. `beta = mean(y)`.}
+
+\item{cov}{Named numeric vector with covariance parameters:
+`sill`, `range`, `nugget`, and `smooth`.}
 
 \item{bcl_data}{Object created by [prepare_bcl_data()].}
 
 \item{type}{Character. Either `"marginal"` or `"conditional"`.}
 }
 \value{
-Numeric value of the block-pairwise negative log-likelihood.
+Numeric value of the Gaussian block-pairwise negative composite
+  log-likelihood.
 }
 \description{
 Evaluates the Gaussian block-pairwise composite negative log-likelihood
-for a given parameter vector.
+for a given regression parameter vector and covariance parameter vector.
+}
+\details{
+The mean structure is
+
+\deqn{
+  Y(s_i) = x_i^\top \beta + \varepsilon(s_i),
+}
+
+where the residual spatial process has covariance parameters
+`sill`, `range`, `nugget`, and `smooth`.
 }

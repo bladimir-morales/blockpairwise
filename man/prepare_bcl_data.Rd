@@ -5,7 +5,9 @@
 \title{Prepare block-pairwise data}
 \usage{
 prepare_bcl_data(
-  data,
+  y,
+  coords,
+  X = NULL,
   cblocks = c("regular", "kmeans", "row", "col"),
   nblocks = 1L,
   fweight = c("nn", "dist"),
@@ -14,7 +16,11 @@ prepare_bcl_data(
 )
 }
 \arguments{
-\item{data}{data.frame or matrix with columns x, y, z.}
+\item{y}{numeric response vector.}
+
+\item{coords}{numeric matrix/data.frame of spatial coordinates.}
+
+\item{X}{optional design matrix. If NULL, an intercept-only model is used.}
 
 \item{cblocks}{block construction method.}
 
