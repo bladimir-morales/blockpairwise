@@ -249,7 +249,6 @@ fit_blockpairwise <- function(y,
 
   # 10. Optimization ----
 
-
   time_fit <- system.time({
 
     if (optimizer == "L-BFGS-B") {
