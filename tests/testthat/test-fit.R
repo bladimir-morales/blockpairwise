@@ -119,7 +119,7 @@ test_that("eval_blockpairwise returns finite values for marginal and conditional
 })
 
 
-test_that("fit_blockpairwise works for intercept-only model", {
+test_that("fit_bp works for intercept-only model", {
 
   y <- c(1.1, 0.8, 1.4, 1.2, 1.6, 1.3)
 
@@ -128,7 +128,7 @@ test_that("fit_blockpairwise works for intercept-only model", {
     y = c(0.0, 0.1, 0.0, 0.1, 0.0, 0.1)
   )
 
-  fit <- fit_blockpairwise(
+  fit <- fit_bp(
     y = y,
     coords = coords,
     X = NULL,
@@ -164,7 +164,7 @@ test_that("fit_blockpairwise works for intercept-only model", {
 })
 
 
-test_that("fit_blockpairwise works with intercept plus covariate", {
+test_that("fit_bp works with intercept plus covariate", {
 
   y <- c(1.0, 1.2, 1.5, 1.7, 2.0, 2.2)
 
@@ -180,7 +180,7 @@ test_that("fit_blockpairwise works with intercept plus covariate", {
 
   colnames(X) <- "z"
 
-  fit <- fit_blockpairwise(
+  fit <- fit_bp(
     y = y,
     coords = coords,
     X = X,

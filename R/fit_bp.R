@@ -24,26 +24,26 @@
 #'
 #' @return Object of class "bp_fit".
 #' @export
-fit_blockpairwise <- function(y,
-                              coords,
-                              X = NULL,
-                              start_beta = NULL,
-                              start_cov = NULL,
-                              fixed_param = NULL,
-                              likelihood = c("conditional", "marginal"),
-                              optimizer = c("L-BFGS-B", "BFGS", "Nelder-Mead", "CG"),
-                              par_scale = c("natural", "log"),
-                              cblocks = c("regular", "kmeans", "row", "col"),
-                              nblocks = 1L,
-                              fweight = c("nn", "dist"),
-                              nnk = NULL,
-                              w = NULL,
-                              precomp = NULL,
-                              lower = NULL,
-                              upper = NULL,
-                              eps_nugget = 1e-10,
-                              control = list(),
-                              ...) {
+fit_bp <- function(y,
+                   coords,
+                   X = NULL,
+                   start_beta = NULL,
+                   start_cov = NULL,
+                   fixed_param = NULL,
+                   likelihood = c("conditional", "marginal"),
+                   optimizer = c("L-BFGS-B", "BFGS", "Nelder-Mead", "CG"),
+                   par_scale = c("natural", "log"),
+                   cblocks = c("regular", "kmeans", "row", "col"),
+                   nblocks = 1L,
+                   fweight = c("nn", "dist"),
+                   nnk = NULL,
+                   w = NULL,
+                   precomp = NULL,
+                   lower = NULL,
+                   upper = NULL,
+                   eps_nugget = 1e-10,
+                   control = list(),
+                   ...) {
 
   likelihood <- match.arg(likelihood)
   optimizer  <- match.arg(optimizer)

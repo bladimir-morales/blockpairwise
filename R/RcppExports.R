@@ -5,6 +5,10 @@ assemble_pairs <- function(nn_idx, nn_dists, nnk) {
     .Call(`_blockpairwise_assemble_pairs`, nn_idx, nn_dists, nnk)
 }
 
+bp_zi_weibull_cpp <- function(par, y_list, pairs_list, dist_list, X_list = NULL, W_list = NULL, has_X = FALSE, has_W = FALSE, eps = 1e-12) {
+    .Call(`_blockpairwise_bp_zi_weibull_cpp`, par, y_list, pairs_list, dist_list, X_list, W_list, has_X, has_W, eps)
+}
+
 matern <- function(d, range, smooth) {
     .Call(`_blockpairwise_matern`, d, range, smooth)
 }

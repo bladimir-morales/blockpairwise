@@ -23,6 +23,25 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// bp_zi_weibull_cpp
+double bp_zi_weibull_cpp(const NumericVector& par, const List& y_list, const List& pairs_list, const List& dist_list, const Nullable<List>& X_list, const Nullable<List>& W_list, const bool has_X, const bool has_W, const double eps);
+RcppExport SEXP _blockpairwise_bp_zi_weibull_cpp(SEXP parSEXP, SEXP y_listSEXP, SEXP pairs_listSEXP, SEXP dist_listSEXP, SEXP X_listSEXP, SEXP W_listSEXP, SEXP has_XSEXP, SEXP has_WSEXP, SEXP epsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const NumericVector& >::type par(parSEXP);
+    Rcpp::traits::input_parameter< const List& >::type y_list(y_listSEXP);
+    Rcpp::traits::input_parameter< const List& >::type pairs_list(pairs_listSEXP);
+    Rcpp::traits::input_parameter< const List& >::type dist_list(dist_listSEXP);
+    Rcpp::traits::input_parameter< const Nullable<List>& >::type X_list(X_listSEXP);
+    Rcpp::traits::input_parameter< const Nullable<List>& >::type W_list(W_listSEXP);
+    Rcpp::traits::input_parameter< const bool >::type has_X(has_XSEXP);
+    Rcpp::traits::input_parameter< const bool >::type has_W(has_WSEXP);
+    Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
+    rcpp_result_gen = Rcpp::wrap(bp_zi_weibull_cpp(par, y_list, pairs_list, dist_list, X_list, W_list, has_X, has_W, eps));
+    return rcpp_result_gen;
+END_RCPP
+}
 // matern
 double matern(double d, double range, double smooth);
 RcppExport SEXP _blockpairwise_matern(SEXP dSEXP, SEXP rangeSEXP, SEXP smoothSEXP) {
@@ -87,6 +106,7 @@ END_RCPP
 
 static const R_CallMethodDef CallEntries[] = {
     {"_blockpairwise_assemble_pairs", (DL_FUNC) &_blockpairwise_assemble_pairs, 3},
+    {"_blockpairwise_bp_zi_weibull_cpp", (DL_FUNC) &_blockpairwise_bp_zi_weibull_cpp, 9},
     {"_blockpairwise_matern", (DL_FUNC) &_blockpairwise_matern, 3},
     {"_blockpairwise_prepare_bcl_storage", (DL_FUNC) &_blockpairwise_prepare_bcl_storage, 4},
     {"_blockpairwise_bcl_gaussian_marginal_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_marginal_ptr, 7},
