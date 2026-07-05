@@ -1,3 +1,5 @@
+// [[Rcpp::depends(BH)]]
+#include <boost/math/quadrature/gauss_kronrod.hpp>
 #include <Rcpp.h>
 #include <cmath>
 #include <algorithm>
@@ -10,6 +12,7 @@ inline double clamp01_cpp(double u, const double eps = 1e-10) {
   if (u > 1.0 - eps) return 1.0 - eps;
   return u;
 }
+
 
 inline double inv_logit_cpp(double x) {
   if (x >= 0.0) {
@@ -68,39 +71,143 @@ inline double c_gauss_cpp(double u1,
     / one_minus_r2
     );
 
+  if (!std::isfinite(log_c)) return 0.0;
+  if (log_c > 700.0) return std::exp(700.0);
+  if (log_c < -745.0) return 0.0;
+
   return std::exp(log_c);
 }
+
 
 inline double p00_cpp(double pi1,
                       double pi2,
                       double rho,
-                      Function pmvnorm_fun,
                       const double eps) {
 
   pi1 = clamp01_cpp(pi1);
   pi2 = clamp01_cpp(pi2);
 
-  rho = std::max(-0.999999, std::min(0.999999, rho));
+  rho = std::max(-0.999999999, std::min(0.999999999, rho));
 
-  double z1 = R::qnorm(pi1, 0.0, 1.0, 1, 0);
-  double z2 = R::qnorm(pi2, 0.0, 1.0, 1, 0);
+  /*
+   Independence case.
+   */
+  if (std::abs(rho) < 1e-12) {
+    double out0 = pi1 * pi2;
 
-  NumericVector upper = NumericVector::create(z1, z2);
-  NumericVector mean = NumericVector::create(0.0, 0.0);
+    if (!std::isfinite(out0)) return eps;
+    if (out0 < eps) return eps;
+    if (out0 > 1.0) return 1.0;
 
-  NumericMatrix sigma(2, 2);
-  sigma(0, 0) = 1.0;
-  sigma(1, 1) = 1.0;
-  sigma(0, 1) = rho;
-  sigma(1, 0) = rho;
+    return out0;
+  }
 
-  NumericVector ans = pmvnorm_fun(
-    Named("upper") = upper,
-    Named("mean") = mean,
-    Named("sigma") = sigma
-  );
+  /*
+   Near-perfect positive dependence:
+   Phi_2(a1,a2;rho) -> min(pi1,pi2) as rho -> 1.
+   */
+  if (rho > 1.0 - 1e-8) {
+    double out1 = std::min(pi1, pi2);
 
-  double out = ans[0];
+    if (!std::isfinite(out1)) return eps;
+    if (out1 < eps) return eps;
+    if (out1 > 1.0) return 1.0;
+
+    return out1;
+  }
+
+  /*
+   Near-perfect negative dependence:
+   Phi_2(a1,a2;rho) -> max(pi1+pi2-1,0) as rho -> -1.
+   This case is mostly defensive for spatial models with nonnegative
+   correlations.
+   */
+  if (rho < -1.0 + 1e-8) {
+    double outm = std::max(pi1 + pi2 - 1.0, 0.0);
+
+    if (!std::isfinite(outm)) return eps;
+    if (outm < eps) return eps;
+    if (outm > 1.0) return 1.0;
+
+    return outm;
+  }
+
+  const double one_minus_r2 = std::max(1.0 - rho * rho, 1e-14);
+  const double sd = std::sqrt(one_minus_r2);
+
+  /*
+   Use the shorter of the two equivalent conditional representations.
+
+   If pi2 <= pi1:
+   p00 = int_{-inf}^{Phi^{-1}(pi2)}
+   Phi((Phi^{-1}(pi1) - rho z)/sd) phi(z) dz.
+
+   If pi1 < pi2:
+   p00 = int_{-inf}^{Phi^{-1}(pi1)}
+   Phi((Phi^{-1}(pi2) - rho z)/sd) phi(z) dz.
+   */
+
+  double upper_pi;
+  double a_cond_pi;
+
+  if (pi2 <= pi1) {
+    upper_pi = pi2;
+    a_cond_pi = pi1;
+  } else {
+    upper_pi = pi1;
+    a_cond_pi = pi2;
+  }
+
+  if (!std::isfinite(upper_pi) || upper_pi <= eps) return eps;
+
+  const double z_upper = R::qnorm(upper_pi, 0.0, 1.0, 1, 0);
+  const double a_cond = R::qnorm(a_cond_pi, 0.0, 1.0, 1, 0);
+
+  if (!std::isfinite(z_upper) || !std::isfinite(a_cond)) return eps;
+
+  /*
+   Lower-tail truncation. The omitted normal probability below -8 is
+   approximately 6.22e-16. If eps is smaller, use qnorm(eps).
+   */
+  double z_lower = R::qnorm(eps, 0.0, 1.0, 1, 0);
+
+  if (!std::isfinite(z_lower)) {
+    z_lower = -8.0;
+  } else {
+    z_lower = std::min(z_lower, -8.0);
+  }
+
+  if (z_upper <= z_lower) return eps;
+
+  auto integrand = [a_cond, rho, sd](double z) -> double {
+    const double arg = (a_cond - rho * z) / sd;
+
+    const double cond = R::pnorm(arg, 0.0, 1.0, 1, 0);
+    const double dens = R::dnorm(z, 0.0, 1.0, 0);
+
+    const double val = cond * dens;
+
+    if (!std::isfinite(val)) return 0.0;
+
+    return val;
+  };
+
+  double error = 0.0;
+  double L1 = 0.0;
+
+  const int max_depth = 10;
+  const double tol = 1e-10;
+
+  double out =
+    boost::math::quadrature::gauss_kronrod<double, 31>::integrate(
+        integrand,
+        z_lower,
+        z_upper,
+        max_depth,
+        tol,
+        &error,
+        &L1
+    );
 
   if (!std::isfinite(out)) return eps;
   if (out < eps) return eps;
@@ -176,21 +283,26 @@ inline double g_pair_cpp(double y1,
                          double shape,
                          double range,
                          double gamma_term,
-                         double eps,
-                         Function pmvnorm_fun) {
+                         double eps) {
   if (range <= 0.0 || shape <= 0.0) return eps;
 
   double rho = std::exp(-d / range);
-  rho = std::max(-0.999999, std::min(0.999999, rho));
+
+  if (d <= 0.0) {
+    rho = 1.0;
+  }
 
   double scale1 = mu1 / gamma_term;
   double scale2 = mu2 / gamma_term;
+
+  if (!std::isfinite(scale1) || !std::isfinite(scale2)) return eps;
+  if (scale1 <= 0.0 || scale2 <= 0.0) return eps;
 
   double val = eps;
 
   if (y1 == 0.0 && y2 == 0.0) {
 
-    val = p00_cpp(pi1, pi2, rho, pmvnorm_fun, eps);
+    val = p00_cpp(pi1, pi2, rho, eps);
 
   } else if (y1 == 0.0 && y2 > 0.0) {
 
@@ -271,9 +383,6 @@ double bp_zi_weibull_cpp(const NumericVector& par,
   if (!std::isfinite(shape) || !std::isfinite(range)) return 1e20;
   if (shape <= 0.0 || range <= 0.0) return 1e20;
 
-  Environment mvtnorm_env = Environment::namespace_env("mvtnorm");
-  Function pmvnorm_fun = mvtnorm_env["pmvnorm"];
-
   double gamma_term = std::tgamma(1.0 + 1.0 / shape);
 
   if (!std::isfinite(gamma_term) || gamma_term <= 0.0) return 1e20;
@@ -304,6 +413,10 @@ double bp_zi_weibull_cpp(const NumericVector& par,
         }
 
         mu[i] = std::exp(eta);
+
+        if (!std::isfinite(mu[i]) || mu[i] <= 0.0) {
+          return 1e20;
+        }
       }
 
     } else {
@@ -352,8 +465,7 @@ double bp_zi_weibull_cpp(const NumericVector& par,
                         shape,
                         range,
                         gamma_term,
-                        eps,
-                        pmvnorm_fun
+                        eps
       );
 
       cl += std::log(gij);

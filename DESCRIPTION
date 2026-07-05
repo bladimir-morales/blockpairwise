@@ -12,8 +12,7 @@ License: GPL-3
 Imports:
     Rcpp,
     stats,
-    nabor,
-    mvtnorm
+    nabor
 LinkingTo:
     Rcpp,
     RcppParallel,

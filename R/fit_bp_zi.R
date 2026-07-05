@@ -379,8 +379,6 @@ fit_bp_zi <- function(y,
   out
 }
 
-#' @importFrom mvtnorm pmvnorm
-NULL
 
 bp_zi_make_start_param <- function(y,
                                    coords,
