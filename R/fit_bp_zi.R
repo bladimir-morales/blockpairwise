@@ -6,8 +6,12 @@
 #' @param W optional design matrix for the zero-inflation probability. If NULL, intercept-only.
 #' @param start_beta optional initial beta vector for log(mu).
 #' @param start_alpha optional initial alpha vector for logit(pi).
-#' @param start_zi optional named vector with starts: shape, range.
-#' @param fixed_param optional named vector of fixed parameters.
+#' @param start_dist optional named vector with positive distributional starts.
+#'   For the zero-inflated Weibull model, currently use start_dist = c(shape = ...).
+#' @param start_cov optional named vector with covariance starts: range, smooth.
+#'   The exponential correlation model is obtained by fixing smooth = 0.5.
+#' @param fixed_param optional named vector of fixed parameters. For example,
+#'   use fixed_param = c(smooth = 0.5) to fit the exponential correlation model.
 #' @param optimizer optimization method passed to stats::optim().
 #' @param cblocks block construction method.
 #' @param nblocks number of blocks.
@@ -29,7 +33,8 @@ fit_bp_zi <- function(y,
                       W = NULL,
                       start_beta = NULL,
                       start_alpha = NULL,
-                      start_zi = NULL,
+                      start_dist = NULL,
+                      start_cov = NULL,
                       fixed_param = NULL,
                       optimizer = c("L-BFGS-B", "BFGS", "Nelder-Mead", "CG"),
                       cblocks = c("regular", "kmeans", "row", "col"),
@@ -45,10 +50,10 @@ fit_bp_zi <- function(y,
                       ...) {
 
   optimizer <- match.arg(optimizer)
-  cblocks   <- match.arg(cblocks)
-  fweight   <- match.arg(fweight)
+  cblocks <- match.arg(cblocks)
+  fweight <- match.arg(fweight)
 
-  # 1. Response validation
+  # 1. Response validation ----
 
   y <- as.numeric(y)
 
@@ -61,13 +66,15 @@ fit_bp_zi <- function(y,
   }
 
   if (any(y < 0)) {
-    stop("y must be nonnegative for the zero-inflated Weibull model.",
-         call. = FALSE)
+    stop(
+      "y must be nonnegative for the zero-inflated Weibull model.",
+      call. = FALSE
+    )
   }
 
   n <- length(y)
 
-  # 2. Coordinates validation
+  # 2. Coordinates validation ----
 
   coords <- as.matrix(coords)
 
@@ -87,7 +94,6 @@ fit_bp_zi <- function(y,
     stop("coords contains non-finite values.", call. = FALSE)
   }
 
-
   # 3. Design matrices ----
 
   X <- bp_build_design_matrix(X, n)
@@ -98,10 +104,11 @@ fit_bp_zi <- function(y,
 
   beta_names <- paste0("beta", seq_len(p_beta) - 1L)
   alpha_names <- paste0("alpha", seq_len(p_alpha) - 1L)
-  zi_names <- c("shape", "range")
 
-  all_names <- c("shape", beta_names, alpha_names, "range")
+  dist_names <- c("shape")
+  cov_names <- c("range", "smooth")
 
+  all_names <- c(dist_names, beta_names, alpha_names, cov_names)
 
   # 4. Starting values in natural/statistical scale ----
 
@@ -112,11 +119,13 @@ fit_bp_zi <- function(y,
     W = W,
     start_beta = start_beta,
     start_alpha = start_alpha,
-    start_zi = start_zi,
+    start_dist = start_dist,
+    start_cov = start_cov,
     fixed_param = fixed_param,
     beta_names = beta_names,
     alpha_names = alpha_names,
-    zi_names = zi_names
+    dist_names = dist_names,
+    cov_names = cov_names
   )
 
   start_param <- start_param[all_names]
@@ -159,11 +168,13 @@ fit_bp_zi <- function(y,
   bp_zi_check_param(
     start_param = start_param,
     beta_names = beta_names,
-    alpha_names = alpha_names
+    alpha_names = alpha_names,
+    dist_names = dist_names,
+    cov_names = cov_names
   )
 
   # 6. Optimization scale ----
-  # shape and range are optimized on log-scale.
+  # shape, range and smooth are optimized on log-scale.
   # beta and alpha remain unconstrained.
 
   start_opt <- bp_zi_make_start_opt(
@@ -178,15 +189,17 @@ fit_bp_zi <- function(y,
   free_names_opt <- setdiff(all_names_opt, fixed_param_names_opt)
 
   if (length(free_names_opt) == 0L) {
-    stop("All parameters are fixed. There is nothing to optimize.",
-         call. = FALSE)
+    stop(
+      "All parameters are fixed. There is nothing to optimize.",
+      call. = FALSE
+    )
   }
 
   par0 <- start_opt[free_names_opt]
 
   # 7. Bounds ----
   # lower and upper must be named in optimization scale:
-  # log_shape, beta*, alpha*, log_range.
+  # log_shape, beta*, alpha*, log_range, log_smooth.
 
   bounds <- normalize_bounds(
     lower = lower,
@@ -215,8 +228,10 @@ fit_bp_zi <- function(y,
   } else {
 
     if (!inherits(precomp, "bp_precomp")) {
-      stop("precomp must be an object created by prepare_bcl_data().",
-           call. = FALSE)
+      stop(
+        "precomp must be an object created by prepare_bcl_data().",
+        call. = FALSE
+      )
     }
   }
 
@@ -265,7 +280,6 @@ fit_bp_zi <- function(y,
     }
   })
 
-
   # 11. Decode fitted parameters ----
 
   par_hat_opt <- start_opt
@@ -283,10 +297,11 @@ fit_bp_zi <- function(y,
   beta_hat <- par_hat[beta_names]
   alpha_hat <- par_hat[alpha_names]
 
-  names(beta_hat) <- sub("^beta", "", names(beta_hat))
-  names(alpha_hat) <- sub("^alpha", "", names(alpha_hat))
+  dist_hat <- par_hat[dist_names]
+  cov_hat <- par_hat[cov_names]
 
-  zi_hat <- par_hat[c("shape", "range")]
+  # kept for backward compatibility with existing print/coef/tests
+  zi_hat <- par_hat[c(dist_names, cov_names)]
 
   if (p_beta == 1L) {
     coefficients_mu <- exp(unname(beta_hat[1]))
@@ -302,17 +317,16 @@ fit_bp_zi <- function(y,
     coefficients_zi <- alpha_hat
   }
 
-
   par_user <- par_hat
 
   if (p_beta == 1L) {
     par_user[beta_names] <- coefficients_mu
-    names(par_user)[names(par_user) == beta_names] <- "mu"
+    names(par_user)[match(beta_names, names(par_user))] <- "mu"
   }
 
   if (p_alpha == 1L) {
     par_user[alpha_names] <- coefficients_zi
-    names(par_user)[names(par_user) == alpha_names] <- "pi"
+    names(par_user)[match(alpha_names, names(par_user))] <- "pi"
   }
 
   # 12. Composite log-likelihood ----
@@ -331,6 +345,11 @@ fit_bp_zi <- function(y,
 
     coefficients_mu = coefficients_mu,
     coefficients_zi = coefficients_zi,
+
+    dist_par = dist_hat,
+    cov_par = cov_hat,
+
+    # backward-compatible alias
     zi_par = zi_hat,
 
     start_param = start_param,
@@ -386,16 +405,18 @@ bp_zi_make_start_param <- function(y,
                                    W,
                                    start_beta = NULL,
                                    start_alpha = NULL,
-                                   start_zi = NULL,
+                                   start_dist = NULL,
+                                   start_cov = NULL,
                                    fixed_param = NULL,
                                    beta_names,
                                    alpha_names,
-                                   zi_names = c("shape", "range")) {
+                                   dist_names = c("shape"),
+                                   cov_names = c("range", "smooth")) {
 
   p_beta <- ncol(X)
   p_alpha <- ncol(W)
 
-  all_names <- c("shape", beta_names, alpha_names, "range")
+  all_names <- c(dist_names, beta_names, alpha_names, cov_names)
 
   if (!is.null(fixed_param)) {
 
@@ -532,49 +553,83 @@ bp_zi_make_start_param <- function(y,
     domain_diameter <- 1
   }
 
-  zi0 <- c(
-    shape = 1.5,
-    range = 0.25 * domain_diameter
+  dist0 <- c(
+    shape = 1.5
   )
 
-  if (!is.finite(zi0["range"]) || zi0["range"] <= 0) {
-    zi0["range"] <- 1
+  cov0 <- c(
+    range = 0.25 * domain_diameter,
+    smooth = 0.5
+  )
+
+  if (!is.finite(cov0["range"]) || cov0["range"] <= 0) {
+    cov0["range"] <- 1
   }
 
-  if (!is.null(start_zi)) {
+  if (!is.null(start_dist)) {
 
-    if (is.null(names(start_zi))) {
-      stop("start_zi must be a named numeric vector.", call. = FALSE)
+    if (is.null(names(start_dist))) {
+      stop("start_dist must be a named numeric vector.", call. = FALSE)
     }
 
-    start_zi_names <- names(start_zi)
-    start_zi <- as.numeric(start_zi)
-    names(start_zi) <- start_zi_names
+    start_dist_names <- names(start_dist)
+    start_dist <- as.numeric(start_dist)
+    names(start_dist) <- start_dist_names
 
-    if (any(!is.finite(start_zi))) {
-      stop("start_zi contains non-finite values.", call. = FALSE)
+    if (any(!is.finite(start_dist))) {
+      stop("start_dist contains non-finite values.", call. = FALSE)
     }
 
-    unknown_zi <- setdiff(names(start_zi), zi_names)
+    unknown_dist <- setdiff(names(start_dist), dist_names)
 
-    if (length(unknown_zi) > 0L) {
+    if (length(unknown_dist) > 0L) {
       stop(
-        "Unknown names in start_zi: ",
-        paste(unknown_zi, collapse = ", "),
+        "Unknown names in start_dist: ",
+        paste(unknown_dist, collapse = ", "),
         ". Valid names are: ",
-        paste(zi_names, collapse = ", "),
+        paste(dist_names, collapse = ", "),
         call. = FALSE
       )
     }
 
-    zi0[names(start_zi)] <- start_zi
+    dist0[names(start_dist)] <- start_dist
+  }
+
+  if (!is.null(start_cov)) {
+
+    if (is.null(names(start_cov))) {
+      stop("start_cov must be a named numeric vector.", call. = FALSE)
+    }
+
+    start_cov_names <- names(start_cov)
+    start_cov <- as.numeric(start_cov)
+    names(start_cov) <- start_cov_names
+
+    if (any(!is.finite(start_cov))) {
+      stop("start_cov contains non-finite values.", call. = FALSE)
+    }
+
+    unknown_cov <- setdiff(names(start_cov), cov_names)
+
+    if (length(unknown_cov) > 0L) {
+      stop(
+        "Unknown names in start_cov: ",
+        paste(unknown_cov, collapse = ", "),
+        ". Valid names are: ",
+        paste(cov_names, collapse = ", "),
+        call. = FALSE
+      )
+    }
+
+    cov0[names(start_cov)] <- start_cov
   }
 
   if (length(fixed_names) > 0L) {
 
     fixed_beta <- intersect(beta_names, fixed_names)
     fixed_alpha <- intersect(alpha_names, fixed_names)
-    fixed_zi <- intersect(zi_names, fixed_names)
+    fixed_dist <- intersect(dist_names, fixed_names)
+    fixed_cov <- intersect(cov_names, fixed_names)
 
     if (length(fixed_beta) > 0L) {
       beta0[fixed_beta] <- fixed_param[fixed_beta]
@@ -584,8 +639,12 @@ bp_zi_make_start_param <- function(y,
       alpha0[fixed_alpha] <- fixed_param[fixed_alpha]
     }
 
-    if (length(fixed_zi) > 0L) {
-      zi0[fixed_zi] <- fixed_param[fixed_zi]
+    if (length(fixed_dist) > 0L) {
+      dist0[fixed_dist] <- fixed_param[fixed_dist]
+    }
+
+    if (length(fixed_cov) > 0L) {
+      cov0[fixed_cov] <- fixed_param[fixed_cov]
     }
   }
 
@@ -593,20 +652,24 @@ bp_zi_make_start_param <- function(y,
   alpha0[is.na(alpha0)] <- 0
 
   out <- c(
-    shape = unname(zi0["shape"]),
+    shape = unname(dist0["shape"]),
     beta0,
     alpha0,
-    range = unname(zi0["range"])
+    range = unname(cov0["range"]),
+    smooth = unname(cov0["smooth"])
   )
 
   out
 }
 
+
 bp_zi_check_param <- function(start_param,
                               beta_names,
-                              alpha_names) {
+                              alpha_names,
+                              dist_names = c("shape"),
+                              cov_names = c("range", "smooth")) {
 
-  all_names <- c("shape", beta_names, alpha_names, "range")
+  all_names <- c(dist_names, beta_names, alpha_names, cov_names)
 
   missing_names <- setdiff(all_names, names(start_param))
 
@@ -618,13 +681,16 @@ bp_zi_check_param <- function(start_param,
     )
   }
 
-  shape <- unname(start_param["shape"])
+  dist <- start_param[dist_names]
   beta <- start_param[beta_names]
   alpha <- start_param[alpha_names]
-  range <- unname(start_param["range"])
+  cov <- start_param[cov_names]
 
-  if (!is.finite(shape) || shape <= 0) {
-    stop("shape must be positive and finite.", call. = FALSE)
+  if (any(!is.finite(dist)) || any(dist <= 0)) {
+    stop(
+      "Distribution parameters must be positive and finite.",
+      call. = FALSE
+    )
   }
 
   if (any(!is.finite(beta))) {
@@ -635,12 +701,16 @@ bp_zi_check_param <- function(start_param,
     stop("alpha coefficients contain non-finite values.", call. = FALSE)
   }
 
-  if (!is.finite(range) || range <= 0) {
-    stop("range must be positive and finite.", call. = FALSE)
+  if (any(!is.finite(cov)) || any(cov <= 0)) {
+    stop(
+      "Covariance parameters must be positive and finite.",
+      call. = FALSE
+    )
   }
 
   invisible(TRUE)
 }
+
 
 bp_zi_make_start_opt <- function(start_param,
                                  beta_names,
@@ -650,9 +720,11 @@ bp_zi_make_start_opt <- function(start_param,
     log_shape = log(unname(start_param["shape"])),
     start_param[beta_names],
     start_param[alpha_names],
-    log_range = log(unname(start_param["range"]))
+    log_range = log(unname(start_param["range"])),
+    log_smooth = log(unname(start_param["smooth"]))
   )
 }
+
 
 bp_zi_map_fixed_to_opt <- function(fixed_param_names) {
 
@@ -660,6 +732,7 @@ bp_zi_map_fixed_to_opt <- function(fixed_param_names) {
 
   out[out == "shape"] <- "log_shape"
   out[out == "range"] <- "log_range"
+  out[out == "smooth"] <- "log_smooth"
 
   out
 }
@@ -673,12 +746,14 @@ bp_zi_decode_opt_param <- function(par_opt,
   beta <- par_opt[beta_names]
   alpha <- par_opt[alpha_names]
   range <- exp(unname(par_opt["log_range"]))
+  smooth <- exp(unname(par_opt["log_smooth"]))
 
   par <- c(
     shape = shape,
     beta,
     alpha,
-    range = range
+    range = range,
+    smooth = smooth
   )
 
   list(
@@ -686,9 +761,11 @@ bp_zi_decode_opt_param <- function(par_opt,
     shape = shape,
     beta = beta,
     alpha = alpha,
-    range = range
+    range = range,
+    smooth = smooth
   )
 }
+
 
 bp_zi_make_cpp_param <- function(par_opt,
                                  beta_names,
@@ -698,9 +775,11 @@ bp_zi_make_cpp_param <- function(par_opt,
     log_shape = unname(par_opt["log_shape"]),
     as.numeric(par_opt[beta_names]),
     as.numeric(par_opt[alpha_names]),
-    log_range = unname(par_opt["log_range"])
+    log_range = unname(par_opt["log_range"]),
+    log_smooth = unname(par_opt["log_smooth"])
   )
 }
+
 
 bp_zi_attach_designs <- function(precomp,
                                  X,
@@ -737,6 +816,7 @@ bp_zi_attach_designs <- function(precomp,
   precomp
 }
 
+
 make_objective_bcl_zi <- function(start_opt,
                                   free_names_opt,
                                   beta_names,
@@ -764,13 +844,16 @@ make_objective_bcl_zi <- function(start_opt,
 
     shape <- decoded$shape
     range <- decoded$range
+    smooth <- decoded$smooth
     beta <- decoded$beta
     alpha <- decoded$alpha
 
     if (!is.finite(shape) ||
         !is.finite(range) ||
+        !is.finite(smooth) ||
         shape <= 0 ||
         range <= 0 ||
+        smooth <= 0 ||
         any(!is.finite(beta)) ||
         any(!is.finite(alpha))) {
       return(1e10)
@@ -801,7 +884,3 @@ make_objective_bcl_zi <- function(start_opt,
     val
   }
 }
-
-
-
-

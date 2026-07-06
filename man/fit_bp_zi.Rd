@@ -11,7 +11,8 @@ fit_bp_zi(
   W = NULL,
   start_beta = NULL,
   start_alpha = NULL,
-  start_zi = NULL,
+  start_dist = NULL,
+  start_cov = NULL,
   fixed_param = NULL,
   optimizer = c("L-BFGS-B", "BFGS", "Nelder-Mead", "CG"),
   cblocks = c("regular", "kmeans", "row", "col"),
@@ -40,9 +41,14 @@ fit_bp_zi(
 
 \item{start_alpha}{optional initial alpha vector for logit(pi).}
 
-\item{start_zi}{optional named vector with starts: shape, range.}
+\item{start_dist}{optional named vector with positive distributional starts.
+For the zero-inflated Weibull model, currently use start_dist = c(shape = ...).}
 
-\item{fixed_param}{optional named vector of fixed parameters.}
+\item{start_cov}{optional named vector with covariance starts: range, smooth.
+The exponential correlation model is obtained by fixing smooth = 0.5.}
+
+\item{fixed_param}{optional named vector of fixed parameters. For example,
+use fixed_param = c(smooth = 0.5) to fit the exponential correlation model.}
 
 \item{optimizer}{optimization method passed to stats::optim().}
 

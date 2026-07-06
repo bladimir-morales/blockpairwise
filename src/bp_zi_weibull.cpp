@@ -4,6 +4,8 @@
 #include <cmath>
 #include <algorithm>
 
+#include "rho_matern.h"
+
 using namespace Rcpp;
 
 inline double clamp01_cpp(double u, const double eps = 1e-10) {
@@ -50,6 +52,7 @@ inline double f_ZI_cpp(double y,
 
   return (1.0 - pi) * dens;
 }
+
 
 inline double c_gauss_cpp(double u1,
                           double u2,
@@ -282,15 +285,19 @@ inline double g_pair_cpp(double y1,
                          double d,
                          double shape,
                          double range,
+                         double smooth,
                          double gamma_term,
                          double eps) {
-  if (range <= 0.0 || shape <= 0.0) return eps;
 
-  double rho = std::exp(-d / range);
+  if (range <= 0.0 || shape <= 0.0 || smooth <= 0.0) return eps;
 
-  if (d <= 0.0) {
-    rho = 1.0;
-  }
+
+  double rho = rho_matern(d, range, smooth);
+
+  if (!std::isfinite(rho)) return eps;
+
+  if (rho < -0.999999999) rho = -0.999999999;
+  if (rho >  0.999999999) rho =  0.999999999;
 
   double scale1 = mu1 / gamma_term;
   double scale2 = mu2 / gamma_term;
@@ -379,9 +386,19 @@ double bp_zi_weibull_cpp(const NumericVector& par,
   idx += p_pi;
 
   double range = std::exp(par[idx]);
+  idx++;
 
-  if (!std::isfinite(shape) || !std::isfinite(range)) return 1e20;
-  if (shape <= 0.0 || range <= 0.0) return 1e20;
+  double smooth = std::exp(par[idx]);
+
+  if (!std::isfinite(shape) ||
+      !std::isfinite(range) ||
+      !std::isfinite(smooth)) {
+      return 1e20;
+  }
+
+  if (shape <= 0.0 || range <= 0.0 || smooth <= 0.0) {
+    return 1e20;
+  }
 
   double gamma_term = std::tgamma(1.0 + 1.0 / shape);
 
@@ -464,6 +481,7 @@ double bp_zi_weibull_cpp(const NumericVector& par,
                     dist[l],
                         shape,
                         range,
+                        smooth,
                         gamma_term,
                         eps
       );

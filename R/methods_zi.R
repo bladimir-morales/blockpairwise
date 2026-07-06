@@ -6,70 +6,98 @@
 #' @export
 print.bp_zi_fit <- function(x, ...) {
 
-  cat("\nZero-inflated Weibull block-pairwise composite likelihood fit\n")
-  cat("----------------------------------------------------------------\n")
+  cat("\nZero-inflated Weibull block-pairwise likelihood fit\n")
+  cat("-----------------------------------------------------\n")
 
   cat("Number of observations:", x$n, "\n")
+  cat("Number of blocks:", x$nblocks, "\n")
   cat("Number of pairs:", x$n_pairs, "\n")
   cat("Optimizer:", x$optimizer, "\n")
   cat("Convergence:", x$convergence, "\n")
 
-  if (!is.null(x$message)) {
-    cat("Message:", x$message, "\n")
-  }
-
-  cat("\nComposite log-likelihood:", format(x$loglik, digits = 6), "\n")
-  cat("Objective value:", format(x$value, digits = 6), "\n")
-
-  cat("\nZero-inflated marginal parameters:\n")
-  print(x$zi_par)
-
-  cat("\nMean component:\n")
-  print(x$coefficients_mu)
+  cat("\nBlock-pairwise log-likelihood:", format(x$loglik, digits = 6), "\n")
 
   cat("\nZero-inflation component:\n")
-  print(x$coefficients_zi)
+  print(c(x$dist_par, x$coefficients_mu, x$coefficients_zi))
+
+  cat("\nCovariance model:\n")
+  print(x$cov_par)
+
+  if (!is.null(x$fixed_param) || !length(x$fixed_param) == 0L) {
+    cat("\nFixed parameters:\n")
+    print(x$fixed_param)
+  }
 
   invisible(x)
 }
 
-#' Extract coefficients from zero-inflated block-pairwise fit
+
+#' Extract coefficients from a zero-inflated block-pairwise fit
 #'
 #' @param object object of class "bp_zi_fit".
-#' @param component one of "all", "mu", "zi", or "dependence".
-#' @param ... further arguments.
+#' @param component component to extract.
+#' @param ... currently unused.
 #'
 #' @export
 coef.bp_zi_fit <- function(object,
-                           component = c("all", "mu", "zi", "dependence"),
+                           component = c(
+                             "all",
+                             "zero_inflated",
+                             "zi",
+                             "distribution",
+                             "mu",
+                             "pi",
+                             "covariance",
+                             "dependence",
+                             "fixed"
+                           ),
                            ...) {
 
   component <- match.arg(component)
 
-  out <- switch(
+  switch(
     component,
 
     all = c(
-      object$zi_par,
-      mu = object$coefficients_mu,
-      zi = object$coefficients_zi
+      object$dist_par,
+      object$coefficients_mu,
+      object$coefficients_zi,
+      object$cov_par
     ),
+
+    zero_inflated = c(
+      object$dist_par,
+      object$coefficients_mu,
+      object$coefficients_zi
+    ),
+
+    zi = c(
+      object$dist_par,
+      object$coefficients_mu,
+      object$coefficients_zi
+    ),
+
+    distribution = object$dist_par,
 
     mu = object$coefficients_mu,
 
-    zi = object$coefficients_zi,
+    pi = object$coefficients_zi,
 
-    dependence = object$zi_par
+    covariance = object$cov_par,
+
+    dependence = object$cov_par,
+
+    fixed = {
+      if (is.null(object$fixed_param) || length(object$fixed_param) == 0L) {
+        numeric(0L)
+      } else {
+        object$fixed_param
+      }
+    }
   )
-
-  out
 }
 
-#' Log-likelihood method for zero-inflated block-pairwise fit
-#'
-#' @param object object of class "bp_zi_fit".
-#' @param ... further arguments.
-#'
+
 #' @export
 logLik.bp_zi_fit <- function(object, ...) {
 

@@ -2,17 +2,22 @@
 % Please edit documentation in R/methods_zi.R
 \name{coef.bp_zi_fit}
 \alias{coef.bp_zi_fit}
-\title{Extract coefficients from zero-inflated block-pairwise fit}
+\title{Extract coefficients from a zero-inflated block-pairwise fit}
 \usage{
-\method{coef}{bp_zi_fit}(object, component = c("all", "mu", "zi", "dependence"), ...)
+\method{coef}{bp_zi_fit}(
+  object,
+  component = c("all", "zero_inflated", "zi", "distribution", "mu", "pi", "covariance",
+    "dependence", "fixed"),
+  ...
+)
 }
 \arguments{
 \item{object}{object of class "bp_zi_fit".}
 
-\item{component}{one of "all", "mu", "zi", or "dependence".}
+\item{component}{component to extract.}
 
-\item{...}{further arguments.}
+\item{...}{currently unused.}
 }
 \description{
-Extract coefficients from zero-inflated block-pairwise fit
+Extract coefficients from a zero-inflated block-pairwise fit
 }
