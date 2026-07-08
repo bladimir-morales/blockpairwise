@@ -5,10 +5,6 @@ assemble_pairs <- function(nn_idx, nn_dists, nnk) {
     .Call(`_blockpairwise_assemble_pairs`, nn_idx, nn_dists, nnk)
 }
 
-bp_zi_weibull_cpp <- function(par, y_list, pairs_list, dist_list, X_list = NULL, W_list = NULL, has_X = FALSE, has_W = FALSE, eps = 1e-12) {
-    .Call(`_blockpairwise_bp_zi_weibull_cpp`, par, y_list, pairs_list, dist_list, X_list, W_list, has_X, has_W, eps)
-}
-
 matern <- function(d, range, smooth) {
     .Call(`_blockpairwise_matern`, d, range, smooth)
 }
@@ -17,11 +13,23 @@ prepare_bcl_storage <- function(y_list_R, X_list_R, valid_pairs_list_R, dist_pai
     .Call(`_blockpairwise_prepare_bcl_storage`, y_list_R, X_list_R, valid_pairs_list_R, dist_pairs_list_R)
 }
 
-bcl_gaussian_marginal_ptr <- function(ptr_, beta, sill, range, t, t2, smooth) {
-    .Call(`_blockpairwise_bcl_gaussian_marginal_ptr`, ptr_, beta, sill, range, t, t2, smooth)
+bcl_gaussian_marginal_ptr <- function(ptr_, beta, sill, range, t, t2, smooth, nthreads = 0L, min_pairs_parallel = 20000L) {
+    .Call(`_blockpairwise_bcl_gaussian_marginal_ptr`, ptr_, beta, sill, range, t, t2, smooth, nthreads, min_pairs_parallel)
 }
 
-bcl_gaussian_conditional_ptr <- function(ptr_, beta, sill, range, t, t2, smooth) {
-    .Call(`_blockpairwise_bcl_gaussian_conditional_ptr`, ptr_, beta, sill, range, t, t2, smooth)
+bcl_gaussian_conditional_ptr <- function(ptr_, beta, sill, range, t, t2, smooth, nthreads = 0L, min_pairs_parallel = 20000L) {
+    .Call(`_blockpairwise_bcl_gaussian_conditional_ptr`, ptr_, beta, sill, range, t, t2, smooth, nthreads, min_pairs_parallel)
+}
+
+prepare_zi_storage_cpp <- function(y_list, pairs_list, dist_list, X_list = NULL, W_list = NULL, has_X = FALSE, has_W = FALSE) {
+    .Call(`_blockpairwise_prepare_zi_storage_cpp`, y_list, pairs_list, dist_list, X_list, W_list, has_X, has_W)
+}
+
+bp_zi_weibull_ptr <- function(ptr_, par, has_X = FALSE, has_W = FALSE, eps = 1e-12, nthreads = 0L, min_pairs_parallel = 20000L) {
+    .Call(`_blockpairwise_bp_zi_weibull_ptr`, ptr_, par, has_X, has_W, eps, nthreads, min_pairs_parallel)
+}
+
+bp_zi_weibull_cpp <- function(par, y_list, pairs_list, dist_list, X_list = NULL, W_list = NULL, has_X = FALSE, has_W = FALSE, eps = 1e-12, nthreads = 0L, min_pairs_parallel = 20000L) {
+    .Call(`_blockpairwise_bp_zi_weibull_cpp`, par, y_list, pairs_list, dist_list, X_list, W_list, has_X, has_W, eps, nthreads, min_pairs_parallel)
 }
 

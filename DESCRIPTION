@@ -15,6 +15,7 @@ Imports:
     nabor
 LinkingTo:
     Rcpp,
+    RcppArmadillo,
     RcppParallel,
     BH
 Encoding: UTF-8

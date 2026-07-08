@@ -4,14 +4,33 @@
 #' @param ... ignored.
 #' @export
 print.bp_fit <- function(x, ...) {
-  cat("Block-pairwise Gaussian fit\n")
+  cat("\nGaussian block-pairwise likelihood fit\n")
+  cat("-----------------------------------------\n")
+
   cat("Likelihood:", x$likelihood, "\n")
-  cat("Blocks:", x$nblocks, "using", x$cblocks, "\n")
+
+  cat("Number of observations:", x$n, "\n")
+  cat("Number of blocks:", x$nblocks, "using", x$cblocks, "\n")
+  cat("Number of pairs:", x$n_pairs, "\n")
   cat("Pair rule:", x$nnk,x$fweight, "\n\n")
-  cat("Estimators:", "\n\n")
-  print(x$par)
-  cat("\nBlock-pairwise log-likelihood:", x$loglik, "\n")
-  cat("Convergence code:", x$convergence, "\n")
+  cat("Optimizer:", x$optimizer, "\n")
+  cat("Convergence:", x$convergence, "\n")
+
+  cat("\nBlock-pairwise log-likelihood:", format(x$loglik, digits = 6), "\n")
+
+  cat("\nMean component:\n")
+  print(x$coefficients)
+
+  cat("\nCovariance model:\n")
+  print(x$cov_par)
+
+  if (!is.null(x$fixed_param) || !length(x$fixed_param) == 0L) {
+    cat("\nFixed parameters:\n")
+    print(x$fixed_param)
+  }
+
+  cat("\nElapsed time:\n")
+  print(x$time)
   invisible(x)
 }
 
@@ -45,11 +64,10 @@ summary.bp_fit <- function(object, ...) {
 #' @param ... ignored.
 #' @export
 print.summary.bp_fit <- function(x, ...) {
-  cat("Summary of block-pairwise Gaussian fit\n\n")
+  cat("Summary of block-pairwise likelihood fit\n\n")
   print(x$par)
   cat("\nBlock-pairwise log-likelihood:", x$loglik, "\n")
   cat("Convergence code:", x$convergence, "\n")
-  if (!is.null(x$message)) cat("Message:", x$message, "\n")
   cat("\nElapsed time:\n")
   print(x$time)
   invisible(x)

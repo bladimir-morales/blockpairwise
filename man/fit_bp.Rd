@@ -23,6 +23,7 @@ fit_bp(
   lower = NULL,
   upper = NULL,
   eps_nugget = 1e-10,
+  nthreads = NULL,
   control = list(),
   ...
 )
@@ -64,6 +65,9 @@ sill, range, nugget, smooth.}
 \item{upper}{upper bounds in optimization scale.}
 
 \item{eps_nugget}{small constant used only for log-nugget transformation.}
+
+\item{nthreads}{optional number of C++ threads used in the block-pairwise
+likelihood evaluation. If NULL, the backend chooses automatically.}
 
 \item{control}{list passed to stats::optim().}
 

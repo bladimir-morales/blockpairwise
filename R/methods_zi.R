@@ -10,8 +10,9 @@ print.bp_zi_fit <- function(x, ...) {
   cat("-----------------------------------------------------\n")
 
   cat("Number of observations:", x$n, "\n")
-  cat("Number of blocks:", x$nblocks, "\n")
+  cat("Number of blocks:", x$nblocks, "using", x$cblocks, "\n")
   cat("Number of pairs:", x$n_pairs, "\n")
+  cat("Pair rule:", x$nnk,x$fweight, "\n\n")
   cat("Optimizer:", x$optimizer, "\n")
   cat("Convergence:", x$convergence, "\n")
 
@@ -27,6 +28,9 @@ print.bp_zi_fit <- function(x, ...) {
     cat("\nFixed parameters:\n")
     print(x$fixed_param)
   }
+
+  cat("\nElapsed time:\n")
+  print(x$time)
 
   invisible(x)
 }

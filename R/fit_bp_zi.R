@@ -22,6 +22,8 @@
 #' @param lower lower bounds in optimization scale.
 #' @param upper upper bounds in optimization scale.
 #' @param eps numerical lower bound for pairwise contributions.
+#' @param nthreads optional number of C++ threads used in the block-pairwise
+#'   likelihood evaluation. If NULL, the backend chooses automatically.
 #' @param control list passed to stats::optim().
 #' @param ... additional arguments passed to stats::optim().
 #'
@@ -46,12 +48,23 @@ fit_bp_zi <- function(y,
                       lower = NULL,
                       upper = NULL,
                       eps = 1e-12,
+                      nthreads = NULL,
                       control = list(),
                       ...) {
 
   optimizer <- match.arg(optimizer)
   cblocks <- match.arg(cblocks)
   fweight <- match.arg(fweight)
+
+  if (is.null(nthreads)) {
+    nthreads <- 0L
+  } else {
+    nthreads <- as.integer(nthreads)
+
+    if (length(nthreads) != 1L || is.na(nthreads) || nthreads < 1L) {
+      stop("nthreads must be NULL or a positive integer.", call. = FALSE)
+    }
+  }
 
   # 1. Response validation ----
 
@@ -241,6 +254,16 @@ fit_bp_zi <- function(y,
     W = W
   )
 
+  zi_storage_ptr <- prepare_zi_storage_cpp(
+    y_list = precomp$yk,
+    pairs_list = precomp$valid_pairs,
+    dist_list = precomp$dist_pairs,
+    X_list = precomp$Xk,
+    W_list = precomp$Wk,
+    has_X = TRUE,
+    has_W = TRUE
+  )
+
   # 9. Objective function ----
 
   objective <- make_objective_bcl_zi(
@@ -248,8 +271,9 @@ fit_bp_zi <- function(y,
     free_names_opt = free_names_opt,
     beta_names = beta_names,
     alpha_names = alpha_names,
-    precomp = precomp,
-    eps = eps
+    zi_storage_ptr = zi_storage_ptr,
+    eps = eps,
+    nthreads = nthreads
   )
 
   # 10. Optimization ----
@@ -370,6 +394,7 @@ fit_bp_zi <- function(y,
     loglik = loglik,
 
     optimizer = optimizer,
+    nthreads = nthreads,
 
     n = n,
     n_pairs = n_pairs,
@@ -821,15 +846,17 @@ make_objective_bcl_zi <- function(start_opt,
                                   free_names_opt,
                                   beta_names,
                                   alpha_names,
-                                  precomp,
-                                  eps = 1e-12) {
+                                  zi_storage_ptr,
+                                  eps = 1e-12,
+                                  nthreads = 0L) {
 
   force(start_opt)
   force(free_names_opt)
   force(beta_names)
   force(alpha_names)
-  force(precomp)
+  force(zi_storage_ptr)
   force(eps)
+  force(nthreads)
 
   function(par_free_opt) {
 
@@ -865,16 +892,13 @@ make_objective_bcl_zi <- function(start_opt,
       alpha_names = alpha_names
     )
 
-    val <- bp_zi_weibull_cpp(
+    val <- bp_zi_weibull_ptr(
+      ptr_ = zi_storage_ptr,
       par = par_cpp,
-      y_list = precomp$yk,
-      pairs_list = precomp$valid_pairs,
-      dist_list = precomp$dist_pairs,
-      X_list = precomp$Xk,
-      W_list = precomp$Wk,
       has_X = TRUE,
       has_W = TRUE,
-      eps = eps
+      eps = eps,
+      nthreads = nthreads
     )
 
     if (!is.finite(val)) {

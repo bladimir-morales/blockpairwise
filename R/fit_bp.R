@@ -19,6 +19,8 @@
 #' @param lower lower bounds in optimization scale.
 #' @param upper upper bounds in optimization scale.
 #' @param eps_nugget small constant used only for log-nugget transformation.
+#' @param nthreads optional number of C++ threads used in the block-pairwise
+#'   likelihood evaluation. If NULL, the backend chooses automatically.
 #' @param control list passed to stats::optim().
 #' @param ... additional arguments passed to stats::optim().
 #'
@@ -42,6 +44,7 @@ fit_bp <- function(y,
                    lower = NULL,
                    upper = NULL,
                    eps_nugget = 1e-10,
+                   nthreads = NULL,
                    control = list(),
                    ...) {
 
@@ -50,6 +53,16 @@ fit_bp <- function(y,
   par_scale  <- match.arg(par_scale)
   cblocks    <- match.arg(cblocks)
   fweight    <- match.arg(fweight)
+
+  if (is.null(nthreads)) {
+    nthreads <- 0L
+  } else {
+    nthreads <- as.integer(nthreads)
+
+    if (length(nthreads) != 1L || is.na(nthreads) || nthreads < 1L) {
+      stop("nthreads must be NULL or a positive integer.", call. = FALSE)
+    }
+  }
 
   # 1. Response validation
 
@@ -93,7 +106,7 @@ fit_bp <- function(y,
 
   p_beta <- ncol(X)
 
-  beta_names <- paste0("beta_", seq_len(p_beta) - 1L)
+  beta_names <- paste0("beta", seq_len(p_beta) - 1L)
   cov_names  <- c("sill", "range", "nugget", "smooth")
   all_names  <- c(beta_names, cov_names)
 
@@ -219,7 +232,8 @@ fit_bp <- function(y,
     storage_ptr = storage_ptr,
     likelihood = likelihood,
     par_scale = par_scale,
-    eps_nugget = eps_nugget
+    eps_nugget = eps_nugget,
+    nthreads = nthreads
   )
 
   # 10. Optimization ----
@@ -268,7 +282,7 @@ fit_bp <- function(y,
   beta_hat <- par_hat[beta_names]
   cov_hat  <- par_hat[cov_names]
 
-  names(beta_hat) <- sub("^beta_", "", names(beta_hat))
+  names(beta_hat) <- names(beta_hat)
 
 
   # 12 loglik computation ----
@@ -316,8 +330,10 @@ fit_bp <- function(y,
 
     likelihood = likelihood,
     optimizer = optimizer,
+    nthreads = nthreads,
 
     n = n,
+    n_pairs = n_pairs,
     p_beta = p_beta,
     X_colnames = colnames(X),
 
@@ -771,7 +787,8 @@ make_objective_bcl <- function(start_opt,
                                storage_ptr,
                                likelihood,
                                par_scale = c("natural", "log"),
-                               eps_nugget = 1e-10) {
+                               eps_nugget = 1e-10,
+                               nthreads = 0L) {
 
   par_scale <- match.arg(par_scale)
 
@@ -782,6 +799,7 @@ make_objective_bcl <- function(start_opt,
   force(likelihood)
   force(par_scale)
   force(eps_nugget)
+  force(nthreads)
 
   function(par_free_opt) {
 
@@ -830,7 +848,8 @@ make_objective_bcl <- function(start_opt,
         range,
         t,
         t2,
-        smooth
+        smooth,
+        nthreads
       ),
 
       conditional = bcl_gaussian_conditional_ptr(
@@ -840,7 +859,8 @@ make_objective_bcl <- function(start_opt,
         range,
         t,
         t2,
-        smooth
+        smooth,
+        nthreads
       )
     )
 

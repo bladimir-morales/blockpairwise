@@ -24,6 +24,7 @@ fit_bp_zi(
   lower = NULL,
   upper = NULL,
   eps = 1e-12,
+  nthreads = NULL,
   control = list(),
   ...
 )
@@ -69,6 +70,9 @@ use fixed_param = c(smooth = 0.5) to fit the exponential correlation model.}
 \item{upper}{upper bounds in optimization scale.}
 
 \item{eps}{numerical lower bound for pairwise contributions.}
+
+\item{nthreads}{optional number of C++ threads used in the block-pairwise
+likelihood evaluation. If NULL, the backend chooses automatically.}
 
 \item{control}{list passed to stats::optim().}
 
