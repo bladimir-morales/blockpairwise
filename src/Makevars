@@ -1,0 +1,6 @@
+CXX_STD = CXX17
+
+RCPP_PARALLEL_HOME = /home/bmorales/R/x86_64-pc-linux-gnu-library/4.4/RcppParallel
+
+PKG_LIBS = $(RCPP_PARALLEL_HOME)/libs/RcppParallel.so \
+           -L$(RCPP_PARALLEL_HOME)/lib -ltbb -ltbbmalloc
