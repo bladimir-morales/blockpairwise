@@ -321,11 +321,11 @@ fit_bp_zi <- function(y,
   beta_hat <- par_hat[beta_names]
   alpha_hat <- par_hat[alpha_names]
 
-  dist_hat <- par_hat[dist_names]
-  cov_hat <- par_hat[cov_names]
+  coefficients_dist <- par_hat[dist_names]
+  coefficients_cov <- par_hat[cov_names]
 
   # kept for backward compatibility with existing print/coef/tests
-  zi_hat <- par_hat[c(dist_names, cov_names)]
+  #zi_hat <- par_hat[c(dist_names, cov_names)]
 
   if (p_beta == 1L) {
     coefficients_mu <- exp(unname(beta_hat[1]))
@@ -370,11 +370,11 @@ fit_bp_zi <- function(y,
     coefficients_mu = coefficients_mu,
     coefficients_zi = coefficients_zi,
 
-    dist_par = dist_hat,
-    cov_par = cov_hat,
+    coefficients_dist = coefficients_dist,
+    coefficients_cov = coefficients_cov,
 
     # backward-compatible alias
-    zi_par = zi_hat,
+    #zi_par = zi_hat,
 
     start_param = start_param,
     start_optim_scale = start_opt,

@@ -59,19 +59,14 @@ test_that("fit_bp_zi returns a valid bp_zi_fit object without covariates", {
   expect_true(is.numeric(fit$n_pairs))
   expect_gt(fit$n_pairs, 0)
 
-  expect_named(fit$dist_par, "shape")
-  expect_true(all(is.finite(fit$dist_par)))
-  expect_true(all(fit$dist_par > 0))
+  expect_named(fit$coefficients_dist, "shape")
+  expect_true(all(is.finite(fit$coefficients_dist)))
+  expect_true(all(fit$coefficients_dist > 0))
 
-  expect_named(fit$cov_par, c("range", "smooth"))
-  expect_true(all(is.finite(fit$cov_par)))
-  expect_true(all(fit$cov_par > 0))
-  expect_equal(unname(fit$cov_par["smooth"]), smooth, tolerance = 1e-10)
-
-  expect_named(fit$zi_par, c("shape", "range", "smooth"))
-  expect_true(all(is.finite(fit$zi_par)))
-  expect_true(all(fit$zi_par > 0))
-  expect_equal(unname(fit$zi_par["smooth"]), smooth, tolerance = 1e-10)
+  expect_named(fit$coefficients_cov, c("range", "smooth"))
+  expect_true(all(is.finite(fit$coefficients_cov)))
+  expect_true(all(fit$coefficients_cov > 0))
+  expect_equal(unname(fit$coefficients_cov["smooth"]), smooth, tolerance = 1e-10)
 
   expect_named(fit$coefficients_mu, "mu")
   expect_named(fit$coefficients_zi, "pi")
@@ -184,19 +179,15 @@ test_that("fit_bp_zi handles covariates in X and W", {
   expect_true(all(is.finite(fit$coefficients_mu)))
   expect_true(all(is.finite(fit$coefficients_zi)))
 
-  expect_named(fit$dist_par, "shape")
-  expect_true(all(is.finite(fit$dist_par)))
-  expect_true(all(fit$dist_par > 0))
+  expect_named(fit$coefficients_dist, "shape")
+  expect_true(all(is.finite(fit$coefficients_dist)))
+  expect_true(all(fit$coefficients_dist > 0))
 
-  expect_named(fit$cov_par, c("range", "smooth"))
-  expect_true(all(is.finite(fit$cov_par)))
-  expect_true(all(fit$cov_par > 0))
-  expect_equal(unname(fit$cov_par["smooth"]), smooth, tolerance = 1e-10)
+  expect_named(fit$coefficients_cov, c("range", "smooth"))
+  expect_true(all(is.finite(fit$coefficients_cov)))
+  expect_true(all(fit$coefficients_cov > 0))
+  expect_equal(unname(fit$coefficients_cov["smooth"]), smooth, tolerance = 1e-10)
 
-  expect_named(fit$zi_par, c("shape", "range", "smooth"))
-  expect_true(all(is.finite(fit$zi_par)))
-  expect_true(all(fit$zi_par > 0))
-  expect_equal(unname(fit$zi_par["smooth"]), smooth, tolerance = 1e-10)
 
   cf_mu <- coef(fit, component = "mu")
   cf_pi <- coef(fit, component = "pi")
@@ -269,21 +260,17 @@ test_that("fit_bp_zi supports exponential case through Matern smooth 0.5", {
   expect_true(is.numeric(fit$value))
   expect_true(is.finite(fit$value))
 
-  expect_named(fit$dist_par, "shape")
-  expect_named(fit$cov_par, c("range", "smooth"))
+  expect_named(fit$coefficients_dist, "shape")
+  expect_named(fit$coefficients_cov, c("range", "smooth"))
 
-  expect_true(all(is.finite(fit$dist_par)))
-  expect_true(all(is.finite(fit$cov_par)))
+  expect_true(all(is.finite(fit$coefficients_dist)))
+  expect_true(all(is.finite(fit$coefficients_cov)))
 
-  expect_true(all(fit$dist_par > 0))
-  expect_true(all(fit$cov_par > 0))
+  expect_true(all(fit$coefficients_dist > 0))
+  expect_true(all(fit$coefficients_cov > 0))
 
-  expect_equal(unname(fit$cov_par["smooth"]), smooth, tolerance = 1e-10)
+  expect_equal(unname(fit$coefficients_cov["smooth"]), smooth, tolerance = 1e-10)
 
-  expect_named(fit$zi_par, c("shape", "range", "smooth"))
-  expect_true(all(is.finite(fit$zi_par)))
-  expect_true(all(fit$zi_par > 0))
-  expect_equal(unname(fit$zi_par["smooth"]), smooth, tolerance = 1e-10)
 
   cf_dep <- coef(fit, component = "dependence")
   cf_cov <- coef(fit, component = "covariance")

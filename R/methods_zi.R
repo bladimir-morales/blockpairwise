@@ -19,10 +19,10 @@ print.bp_zi_fit <- function(x, ...) {
   cat("\nBlock-pairwise log-likelihood:", format(x$loglik, digits = 6), "\n")
 
   cat("\nZero-inflation component:\n")
-  print(c(x$dist_par, x$coefficients_mu, x$coefficients_zi))
+  print(c(x$coefficients_dist, x$coefficients_mu, x$coefficients_zi))
 
   cat("\nCovariance model:\n")
-  print(x$cov_par)
+  print(x$coefficients_cov)
 
   if (!is.null(x$fixed_param) || !length(x$fixed_param) == 0L) {
     cat("\nFixed parameters:\n")
@@ -63,33 +63,33 @@ coef.bp_zi_fit <- function(object,
     component,
 
     all = c(
-      object$dist_par,
+      object$coefficients_dist,
       object$coefficients_mu,
       object$coefficients_zi,
-      object$cov_par
+      object$coefficients_cov
     ),
 
     zero_inflated = c(
-      object$dist_par,
+      object$coefficients_dist,
       object$coefficients_mu,
       object$coefficients_zi
     ),
 
     zi = c(
-      object$dist_par,
+      object$coefficients_dist,
       object$coefficients_mu,
       object$coefficients_zi
     ),
 
-    distribution = object$dist_par,
+    distribution = object$coefficients_dist,
 
     mu = object$coefficients_mu,
 
     pi = object$coefficients_zi,
 
-    covariance = object$cov_par,
+    covariance = object$coefficients_cov,
 
-    dependence = object$cov_par,
+    dependence = object$coefficients_cov,
 
     fixed = {
       if (is.null(object$fixed_param) || length(object$fixed_param) == 0L) {
