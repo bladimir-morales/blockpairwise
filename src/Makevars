@@ -5,4 +5,4 @@ RCPP_PARALLEL_LIB = $(shell "${R_HOME}/bin/Rscript" -e \
 
 PKG_LIBS += -L$(RCPP_PARALLEL_LIB) \
             -Wl,-rpath,$(RCPP_PARALLEL_LIB) \
-            -lRcppParallel
+            -Wl,-l:RcppParallel.so
