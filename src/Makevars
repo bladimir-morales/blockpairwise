@@ -1,15 +1,8 @@
 CXX_STD = CXX17
 
-<<<<<<< HEAD
-RCPP_PARALLEL_HOME = /home/bmorales/R/x86_64-pc-linux-gnu-library/4.4/RcppParallel
-
-PKG_LIBS = $(RCPP_PARALLEL_HOME)/libs/RcppParallel.so \
-           -L$(RCPP_PARALLEL_HOME)/lib -ltbb -ltbbmalloc
-=======
 RCPP_PARALLEL_LIB = $(shell "${R_HOME}/bin/Rscript" -e \
     'cat(file.path(find.package("RcppParallel"), "libs"))')
 
 PKG_LIBS += -L$(RCPP_PARALLEL_LIB) \
             -Wl,-rpath,$(RCPP_PARALLEL_LIB) \
             -Wl,-l:RcppParallel.so
->>>>>>> main
