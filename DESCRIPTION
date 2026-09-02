@@ -11,6 +11,7 @@ Description:
 License: GPL-3
 Imports:
     Rcpp,
+    RcppParallel,
     stats,
     nabor
 LinkingTo:
