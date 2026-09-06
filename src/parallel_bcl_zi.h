@@ -236,18 +236,15 @@ double sequential_zi_block_sum(const BCLZIStorage& storage,
 template <class PairZIContribution>
 double parallel_zi_block_sum(const BCLZIStorage& storage,
                              const PairZIContribution& contrib,
-                             int nthreads = 0,
-                             int min_pairs_parallel = 20000) {
-
+                             int nthreads = 0) {
   bcl_zi_validate_storage_contrib(storage, contrib);
 
-  const int nt = bcl_zi_choose_nthreads(nthreads);
-  const int total_pairs = bcl_zi_count_pairs(storage);
+  const int nt_requested = bcl_zi_choose_nthreads(nthreads);
+  const int nt = std::min(nt_requested, storage.nb);
 
   const bool use_parallel =
     nt > 1 &&
-    storage.nb > 1 &&
-    total_pairs >= min_pairs_parallel;
+    storage.nb > 1;
 
   if (!use_parallel) {
     return sequential_zi_block_sum(storage, contrib);

@@ -177,8 +177,7 @@ double bcl_gaussian_marginal_ptr(SEXP ptr_,
                                  double t,
                                  double t2,
                                  double smooth,
-                                 int nthreads = 0,
-                                 int min_pairs_parallel = 20000) {
+                                 int nthreads = 0) {
 
   BCLPtr ptr(ptr_);
 
@@ -194,8 +193,7 @@ double bcl_gaussian_marginal_ptr(SEXP ptr_,
   const double out = 0.5 * parallel_block_pairwise_sum(
     *ptr,
     contrib,
-    nthreads,
-    min_pairs_parallel
+    nthreads
   );
 
   if (!std::isfinite(out)) {
@@ -214,8 +212,7 @@ double bcl_gaussian_conditional_ptr(SEXP ptr_,
                                     double t,
                                     double t2,
                                     double smooth,
-                                    int nthreads = 0,
-                                    int min_pairs_parallel = 20000) {
+                                    int nthreads = 0) {
 
   BCLPtr ptr(ptr_);
 
@@ -231,8 +228,7 @@ double bcl_gaussian_conditional_ptr(SEXP ptr_,
   const double out = 0.5 * parallel_block_pairwise_sum(
     *ptr,
     contrib,
-    nthreads,
-    min_pairs_parallel
+    nthreads
   );
 
   if (!std::isfinite(out)) {
