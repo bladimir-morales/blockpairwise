@@ -549,8 +549,7 @@ inline double bp_zi_eval_ptr_cpp(BCLZIStorage& storage,
                                  bool has_X,
                                  bool has_W,
                                  double eps,
-                                 int nthreads,
-                                 int min_pairs_parallel) {
+                                 int nthreads) {
 
   int idx = 0;
 
@@ -627,8 +626,7 @@ inline double bp_zi_eval_ptr_cpp(BCLZIStorage& storage,
   const double cl = parallel_zi_block_sum(
     storage,
     contrib,
-    nthreads,
-    min_pairs_parallel
+    nthreads
   );
 
   if (!std::isfinite(cl)) {
@@ -679,8 +677,7 @@ double bp_zi_weibull_ptr(SEXP ptr_,
                          bool has_X = false,
                          bool has_W = false,
                          double eps = 1e-12,
-                         int nthreads = 0,
-                         int min_pairs_parallel = 20000) {
+                         int nthreads = 0) {
 
   BCLZIStoragePtr ptr(ptr_);
 
@@ -690,8 +687,7 @@ double bp_zi_weibull_ptr(SEXP ptr_,
     has_X,
     has_W,
     eps,
-    nthreads,
-    min_pairs_parallel
+    nthreads
   );
 }
 
@@ -710,8 +706,7 @@ double bp_zi_weibull_cpp(const NumericVector& par,
                          const bool has_X = false,
                          const bool has_W = false,
                          const double eps = 1e-12,
-                         const int nthreads = 0,
-                         const int min_pairs_parallel = 20000) {
+                         const int nthreads = 0) {
 
   BCLZIStorage storage(
       y_list,
@@ -729,7 +724,6 @@ double bp_zi_weibull_cpp(const NumericVector& par,
     has_X,
     has_W,
     eps,
-    nthreads,
-    min_pairs_parallel
+    nthreads
   );
 }

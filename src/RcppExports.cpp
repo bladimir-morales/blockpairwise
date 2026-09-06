@@ -52,8 +52,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // bcl_gaussian_marginal_ptr
-double bcl_gaussian_marginal_ptr(SEXP ptr_, Rcpp::NumericVector beta, double sill, double range, double t, double t2, double smooth, int nthreads, int min_pairs_parallel);
-RcppExport SEXP _blockpairwise_bcl_gaussian_marginal_ptr(SEXP ptr_SEXP, SEXP betaSEXP, SEXP sillSEXP, SEXP rangeSEXP, SEXP tSEXP, SEXP t2SEXP, SEXP smoothSEXP, SEXP nthreadsSEXP, SEXP min_pairs_parallelSEXP) {
+double bcl_gaussian_marginal_ptr(SEXP ptr_, Rcpp::NumericVector beta, double sill, double range, double t, double t2, double smooth, int nthreads);
+RcppExport SEXP _blockpairwise_bcl_gaussian_marginal_ptr(SEXP ptr_SEXP, SEXP betaSEXP, SEXP sillSEXP, SEXP rangeSEXP, SEXP tSEXP, SEXP t2SEXP, SEXP smoothSEXP, SEXP nthreadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -65,14 +65,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type t2(t2SEXP);
     Rcpp::traits::input_parameter< double >::type smooth(smoothSEXP);
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< int >::type min_pairs_parallel(min_pairs_parallelSEXP);
-    rcpp_result_gen = Rcpp::wrap(bcl_gaussian_marginal_ptr(ptr_, beta, sill, range, t, t2, smooth, nthreads, min_pairs_parallel));
+    rcpp_result_gen = Rcpp::wrap(bcl_gaussian_marginal_ptr(ptr_, beta, sill, range, t, t2, smooth, nthreads));
     return rcpp_result_gen;
 END_RCPP
 }
 // bcl_gaussian_conditional_ptr
-double bcl_gaussian_conditional_ptr(SEXP ptr_, Rcpp::NumericVector beta, double sill, double range, double t, double t2, double smooth, int nthreads, int min_pairs_parallel);
-RcppExport SEXP _blockpairwise_bcl_gaussian_conditional_ptr(SEXP ptr_SEXP, SEXP betaSEXP, SEXP sillSEXP, SEXP rangeSEXP, SEXP tSEXP, SEXP t2SEXP, SEXP smoothSEXP, SEXP nthreadsSEXP, SEXP min_pairs_parallelSEXP) {
+double bcl_gaussian_conditional_ptr(SEXP ptr_, Rcpp::NumericVector beta, double sill, double range, double t, double t2, double smooth, int nthreads);
+RcppExport SEXP _blockpairwise_bcl_gaussian_conditional_ptr(SEXP ptr_SEXP, SEXP betaSEXP, SEXP sillSEXP, SEXP rangeSEXP, SEXP tSEXP, SEXP t2SEXP, SEXP smoothSEXP, SEXP nthreadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -84,8 +83,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type t2(t2SEXP);
     Rcpp::traits::input_parameter< double >::type smooth(smoothSEXP);
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< int >::type min_pairs_parallel(min_pairs_parallelSEXP);
-    rcpp_result_gen = Rcpp::wrap(bcl_gaussian_conditional_ptr(ptr_, beta, sill, range, t, t2, smooth, nthreads, min_pairs_parallel));
+    rcpp_result_gen = Rcpp::wrap(bcl_gaussian_conditional_ptr(ptr_, beta, sill, range, t, t2, smooth, nthreads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -107,8 +105,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // bp_zi_weibull_ptr
-double bp_zi_weibull_ptr(SEXP ptr_, NumericVector par, bool has_X, bool has_W, double eps, int nthreads, int min_pairs_parallel);
-RcppExport SEXP _blockpairwise_bp_zi_weibull_ptr(SEXP ptr_SEXP, SEXP parSEXP, SEXP has_XSEXP, SEXP has_WSEXP, SEXP epsSEXP, SEXP nthreadsSEXP, SEXP min_pairs_parallelSEXP) {
+double bp_zi_weibull_ptr(SEXP ptr_, NumericVector par, bool has_X, bool has_W, double eps, int nthreads);
+RcppExport SEXP _blockpairwise_bp_zi_weibull_ptr(SEXP ptr_SEXP, SEXP parSEXP, SEXP has_XSEXP, SEXP has_WSEXP, SEXP epsSEXP, SEXP nthreadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -118,14 +116,13 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< bool >::type has_W(has_WSEXP);
     Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< int >::type min_pairs_parallel(min_pairs_parallelSEXP);
-    rcpp_result_gen = Rcpp::wrap(bp_zi_weibull_ptr(ptr_, par, has_X, has_W, eps, nthreads, min_pairs_parallel));
+    rcpp_result_gen = Rcpp::wrap(bp_zi_weibull_ptr(ptr_, par, has_X, has_W, eps, nthreads));
     return rcpp_result_gen;
 END_RCPP
 }
 // bp_zi_weibull_cpp
-double bp_zi_weibull_cpp(const NumericVector& par, const List& y_list, const List& pairs_list, const List& dist_list, const Nullable<List>& X_list, const Nullable<List>& W_list, const bool has_X, const bool has_W, const double eps, const int nthreads, const int min_pairs_parallel);
-RcppExport SEXP _blockpairwise_bp_zi_weibull_cpp(SEXP parSEXP, SEXP y_listSEXP, SEXP pairs_listSEXP, SEXP dist_listSEXP, SEXP X_listSEXP, SEXP W_listSEXP, SEXP has_XSEXP, SEXP has_WSEXP, SEXP epsSEXP, SEXP nthreadsSEXP, SEXP min_pairs_parallelSEXP) {
+double bp_zi_weibull_cpp(const NumericVector& par, const List& y_list, const List& pairs_list, const List& dist_list, const Nullable<List>& X_list, const Nullable<List>& W_list, const bool has_X, const bool has_W, const double eps, const int nthreads);
+RcppExport SEXP _blockpairwise_bp_zi_weibull_cpp(SEXP parSEXP, SEXP y_listSEXP, SEXP pairs_listSEXP, SEXP dist_listSEXP, SEXP X_listSEXP, SEXP W_listSEXP, SEXP has_XSEXP, SEXP has_WSEXP, SEXP epsSEXP, SEXP nthreadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -139,8 +136,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const bool >::type has_W(has_WSEXP);
     Rcpp::traits::input_parameter< const double >::type eps(epsSEXP);
     Rcpp::traits::input_parameter< const int >::type nthreads(nthreadsSEXP);
-    Rcpp::traits::input_parameter< const int >::type min_pairs_parallel(min_pairs_parallelSEXP);
-    rcpp_result_gen = Rcpp::wrap(bp_zi_weibull_cpp(par, y_list, pairs_list, dist_list, X_list, W_list, has_X, has_W, eps, nthreads, min_pairs_parallel));
+    rcpp_result_gen = Rcpp::wrap(bp_zi_weibull_cpp(par, y_list, pairs_list, dist_list, X_list, W_list, has_X, has_W, eps, nthreads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -149,11 +145,11 @@ static const R_CallMethodDef CallEntries[] = {
     {"_blockpairwise_assemble_pairs", (DL_FUNC) &_blockpairwise_assemble_pairs, 3},
     {"_blockpairwise_matern", (DL_FUNC) &_blockpairwise_matern, 3},
     {"_blockpairwise_prepare_bcl_storage", (DL_FUNC) &_blockpairwise_prepare_bcl_storage, 4},
-    {"_blockpairwise_bcl_gaussian_marginal_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_marginal_ptr, 9},
-    {"_blockpairwise_bcl_gaussian_conditional_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_conditional_ptr, 9},
+    {"_blockpairwise_bcl_gaussian_marginal_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_marginal_ptr, 8},
+    {"_blockpairwise_bcl_gaussian_conditional_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_conditional_ptr, 8},
     {"_blockpairwise_prepare_zi_storage_cpp", (DL_FUNC) &_blockpairwise_prepare_zi_storage_cpp, 7},
-    {"_blockpairwise_bp_zi_weibull_ptr", (DL_FUNC) &_blockpairwise_bp_zi_weibull_ptr, 7},
-    {"_blockpairwise_bp_zi_weibull_cpp", (DL_FUNC) &_blockpairwise_bp_zi_weibull_cpp, 11},
+    {"_blockpairwise_bp_zi_weibull_ptr", (DL_FUNC) &_blockpairwise_bp_zi_weibull_ptr, 6},
+    {"_blockpairwise_bp_zi_weibull_cpp", (DL_FUNC) &_blockpairwise_bp_zi_weibull_cpp, 10},
     {NULL, NULL, 0}
 };
 

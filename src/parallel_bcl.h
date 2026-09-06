@@ -181,18 +181,16 @@ double sequential_block_pairwise_sum(const BCLStorage& storage,
 template <class PairContribution>
 double parallel_block_pairwise_sum(const BCLStorage& storage,
                                    const PairContribution& contrib,
-                                   int nthreads = 0,
-                                   int min_pairs_parallel = 20000) {
-
+                                   int nthreads = 0) {
   bcl_validate_storage_contrib(storage, contrib);
 
-  const int nt = bcl_choose_nthreads(nthreads);
-  const int total_pairs = bcl_count_pairs(storage);
+  const int nt_requested = bcl_choose_nthreads(nthreads);
+
+  const int nt = std::min(nt_requested, storage.nb);
 
   const bool use_parallel =
     nt > 1 &&
-    storage.nb > 1 &&
-    total_pairs >= min_pairs_parallel;
+    storage.nb > 1;
 
   if (!use_parallel) {
     return sequential_block_pairwise_sum(storage, contrib);
