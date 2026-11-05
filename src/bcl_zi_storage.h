@@ -181,6 +181,48 @@ struct BCLZIStorage {
   }
 };
 
+
+struct BCLZIMarginals {
+
+  std::vector<std::vector<double>> pi;
+  std::vector<std::vector<double>> a;
+  std::vector<std::vector<double>> b;
+  std::vector<std::vector<double>> log1m_pi_h;
+
+  BCLZIMarginals(Rcpp::List marg_blocks,
+                 const BCLZIStorage& storage) {
+
+    if (marg_blocks.size() != storage.nb) {
+      Rcpp::stop("Number of marginal blocks does not match storage.");
+    }
+
+    pi.resize(storage.nb);
+    a.resize(storage.nb);
+    b.resize(storage.nb);
+    log1m_pi_h.resize(storage.nb);
+
+    for (int k = 0; k < storage.nb; ++k) {
+
+      Rcpp::List marg = marg_blocks[k];
+
+      pi[k] = Rcpp::as<std::vector<double>>(marg["pi"]);
+      a[k] = Rcpp::as<std::vector<double>>(marg["a"]);
+      b[k] = Rcpp::as<std::vector<double>>(marg["b"]);
+      log1m_pi_h[k] =
+        Rcpp::as<std::vector<double>>(marg["log1m_pi_h"]);
+
+      const int n = storage.n_obs[k];
+
+      if ((pi[k].size() != 1 && pi[k].size() != n) ||
+          (a[k].size() != 1 && a[k].size() != n) ||
+          b[k].size() != n ||
+          log1m_pi_h[k].size() != n) {
+        Rcpp::stop("Invalid marginal dimensions in block.");
+      }
+    }
+  }
+};
+
 typedef Rcpp::XPtr<BCLZIStorage> BCLZIStoragePtr;
 
 #endif

@@ -444,6 +444,117 @@ inline double g_pair_cpp(double y1,
   return val;
 }
 
+// ============================================================
+// Log standard normal CDF
+// ============================================================
+
+inline double log_pnorm_zi_cpp(double x) {
+
+  if (std::isnan(x)) return NAN;
+  if (x == -INFINITY) return -INFINITY;
+  if (x == INFINITY) return 0.0;
+
+  const double inv_sqrt2 = 0.70710678118654752440;
+
+  if (x >= 0.0) {
+    return std::log1p(-0.5 * std::erfc(x * inv_sqrt2));
+  }
+
+  if (x > -10.0) {
+    return std::log(0.5 * std::erfc(-x * inv_sqrt2));
+  }
+
+  // Mills ratio: continued-fraction evaluation in the lower tail
+  const double t = -x;
+  double cf = 0.0;
+
+  for (int k = 40; k >= 1; --k) {
+    cf = static_cast<double>(k) / (t + cf);
+  }
+
+  return -0.5 * t * t - 0.91893853320467274178 -
+    std::log(t + cf);
+}
+
+
+// ============================================================
+// Gaussian copula log-density
+// ============================================================
+
+inline double log_c_gauss_zi_cpp(double b1, double b2, double rho) {
+
+  if (!std::isfinite(b1) || !std::isfinite(b2) ||
+      !std::isfinite(rho) || std::abs(rho) >= 1.0) {
+      return NAN;
+  }
+
+  const double den = (1.0 - rho) * (1.0 + rho);
+
+  return -0.5 * std::log(den) +
+    (rho * b1 * b2 -
+    0.5 * rho * rho * (b1 * b1 + b2 * b2)) / den;
+}
+
+// ============================================================
+// Zero-inflated contribution with precomputed marginals
+// ============================================================
+
+struct BCLZIMarginalContribution {
+
+  double range;
+  double smooth;
+  double eps;
+
+  BCLZIMarginalContribution(double range_,
+                            double smooth_,
+                            double eps_)
+    : range(range_), smooth(smooth_), eps(eps_) {
+
+    if (!std::isfinite(range) || range <= 0.0 ||
+        !std::isfinite(smooth) || smooth <= 0.0) {
+        Rcpp::stop("Invalid covariance parameters.");
+    }
+  }
+
+  inline double operator()(double y1, double y2,
+                         double pi1, double pi2,
+                         double a1, double a2,
+                         double b1, double b2,
+                         double L1, double L2,
+                         double d) const {
+
+    const double rho = rho_matern(d, range, smooth);
+
+    if (!std::isfinite(rho) || std::abs(rho) >= 1.0) {
+      return NAN;
+    }
+
+    const double den = (1.0 - rho) * (1.0 + rho);
+    const double sd = std::sqrt(den);
+
+    // Case 00
+    if (y1 == 0.0 && y2 == 0.0) {
+      return std::log(p00_cpp(pi1, pi2, rho, eps));
+    }
+
+    // Case 0+
+    if (y1 == 0.0 && y2 > 0.0) {
+      return L2 + log_pnorm_zi_cpp((a1 - rho * b2) / sd);
+    }
+
+    // Case +0
+    if (y1 > 0.0 && y2 == 0.0) {
+      return L1 + log_pnorm_zi_cpp((a2 - rho * b1) / sd);
+    }
+
+    // Case ++
+    if (y1 > 0.0 && y2 > 0.0) {
+      return L1 + L2 + log_c_gauss_zi_cpp(b1, b2, rho);
+    }
+
+    return NAN;
+  }
+};
 
 // ============================================================
 // ZI Weibull contribution object
@@ -464,14 +575,14 @@ struct BCLZIWeibullContribution {
   double eps;
 
   BCLZIWeibullContribution(const NumericVector& beta_,
-                        const NumericVector& alpha_,
-                        bool has_X_,
-                        bool has_W_,
-                        double shape_,
-                        double range_,
-                        double smooth_,
-                        double gamma_term_,
-                        double eps_)
+                           const NumericVector& alpha_,
+                           bool has_X_,
+                           bool has_W_,
+                           double shape_,
+                           double range_,
+                           double smooth_,
+                           double gamma_term_,
+                           double eps_)
     : beta(beta_.begin(), beta_.end()),
       alpha(alpha_.begin(), alpha_.end()),
       has_X(has_X_),
@@ -691,6 +802,30 @@ double bp_zi_weibull_ptr(SEXP ptr_,
   );
 }
 
+// ============================================================
+// Objective with precomputed ZI marginals
+// ============================================================
+
+// [[Rcpp::export]]
+double bp_zi_marginals_ptr(SEXP ptr_,
+                           Rcpp::List marg_blocks,
+                           double range,
+                           double smooth,
+                           double eps = 1e-12,
+                           int nthreads = 0) {
+
+  BCLZIStoragePtr ptr(ptr_);
+
+  BCLZIMarginals marg(marg_blocks, *ptr);
+
+  BCLZIMarginalContribution contrib(range, smooth, eps);
+
+  const double cl = parallel_zi_marginals_block_sum(
+    *ptr, marg, contrib, nthreads
+  );
+
+  return -cl;
+}
 
 // ============================================================
 // Compatibility wrapper using R lists
@@ -726,4 +861,22 @@ double bp_zi_weibull_cpp(const NumericVector& par,
     eps,
     nthreads
   );
+}
+
+// [[Rcpp::export]]
+Rcpp::IntegerVector bp_zi_check_marginals_cpp(
+    SEXP ptr_,
+    Rcpp::List marg_blocks) {
+
+  BCLZIStoragePtr ptr(ptr_);
+
+  BCLZIMarginals marg(marg_blocks, *ptr);
+
+  Rcpp::IntegerVector block_sizes(ptr->nb);
+
+  for (int k = 0; k < ptr->nb; ++k) {
+    block_sizes[k] = static_cast<int>(marg.b[k].size());
+  }
+
+  return block_sizes;
 }

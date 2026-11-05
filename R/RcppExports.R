@@ -29,7 +29,15 @@ bp_zi_weibull_ptr <- function(ptr_, par, has_X = FALSE, has_W = FALSE, eps = 1e-
     .Call(`_blockpairwise_bp_zi_weibull_ptr`, ptr_, par, has_X, has_W, eps, nthreads)
 }
 
+bp_zi_marginals_ptr <- function(ptr_, marg_blocks, range, smooth, eps = 1e-12, nthreads = 0L) {
+    .Call(`_blockpairwise_bp_zi_marginals_ptr`, ptr_, marg_blocks, range, smooth, eps, nthreads)
+}
+
 bp_zi_weibull_cpp <- function(par, y_list, pairs_list, dist_list, X_list = NULL, W_list = NULL, has_X = FALSE, has_W = FALSE, eps = 1e-12, nthreads = 0L) {
     .Call(`_blockpairwise_bp_zi_weibull_cpp`, par, y_list, pairs_list, dist_list, X_list, W_list, has_X, has_W, eps, nthreads)
+}
+
+bp_zi_check_marginals_cpp <- function(ptr_, marg_blocks) {
+    .Call(`_blockpairwise_bp_zi_check_marginals_cpp`, ptr_, marg_blocks)
 }
 

@@ -120,6 +120,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// bp_zi_marginals_ptr
+double bp_zi_marginals_ptr(SEXP ptr_, Rcpp::List marg_blocks, double range, double smooth, double eps, int nthreads);
+RcppExport SEXP _blockpairwise_bp_zi_marginals_ptr(SEXP ptr_SEXP, SEXP marg_blocksSEXP, SEXP rangeSEXP, SEXP smoothSEXP, SEXP epsSEXP, SEXP nthreadsSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type ptr_(ptr_SEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type marg_blocks(marg_blocksSEXP);
+    Rcpp::traits::input_parameter< double >::type range(rangeSEXP);
+    Rcpp::traits::input_parameter< double >::type smooth(smoothSEXP);
+    Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
+    Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
+    rcpp_result_gen = Rcpp::wrap(bp_zi_marginals_ptr(ptr_, marg_blocks, range, smooth, eps, nthreads));
+    return rcpp_result_gen;
+END_RCPP
+}
 // bp_zi_weibull_cpp
 double bp_zi_weibull_cpp(const NumericVector& par, const List& y_list, const List& pairs_list, const List& dist_list, const Nullable<List>& X_list, const Nullable<List>& W_list, const bool has_X, const bool has_W, const double eps, const int nthreads);
 RcppExport SEXP _blockpairwise_bp_zi_weibull_cpp(SEXP parSEXP, SEXP y_listSEXP, SEXP pairs_listSEXP, SEXP dist_listSEXP, SEXP X_listSEXP, SEXP W_listSEXP, SEXP has_XSEXP, SEXP has_WSEXP, SEXP epsSEXP, SEXP nthreadsSEXP) {
@@ -140,6 +156,18 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// bp_zi_check_marginals_cpp
+Rcpp::IntegerVector bp_zi_check_marginals_cpp(SEXP ptr_, Rcpp::List marg_blocks);
+RcppExport SEXP _blockpairwise_bp_zi_check_marginals_cpp(SEXP ptr_SEXP, SEXP marg_blocksSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type ptr_(ptr_SEXP);
+    Rcpp::traits::input_parameter< Rcpp::List >::type marg_blocks(marg_blocksSEXP);
+    rcpp_result_gen = Rcpp::wrap(bp_zi_check_marginals_cpp(ptr_, marg_blocks));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_blockpairwise_assemble_pairs", (DL_FUNC) &_blockpairwise_assemble_pairs, 3},
@@ -149,7 +177,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_blockpairwise_bcl_gaussian_conditional_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_conditional_ptr, 8},
     {"_blockpairwise_prepare_zi_storage_cpp", (DL_FUNC) &_blockpairwise_prepare_zi_storage_cpp, 7},
     {"_blockpairwise_bp_zi_weibull_ptr", (DL_FUNC) &_blockpairwise_bp_zi_weibull_ptr, 6},
+    {"_blockpairwise_bp_zi_marginals_ptr", (DL_FUNC) &_blockpairwise_bp_zi_marginals_ptr, 6},
     {"_blockpairwise_bp_zi_weibull_cpp", (DL_FUNC) &_blockpairwise_bp_zi_weibull_cpp, 10},
+    {"_blockpairwise_bp_zi_check_marginals_cpp", (DL_FUNC) &_blockpairwise_bp_zi_check_marginals_cpp, 2},
     {NULL, NULL, 0}
 };
 
