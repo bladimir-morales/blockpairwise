@@ -272,7 +272,6 @@ fit_bp_zi <- function(y, coords, X = NULL,
     zi_storage_ptr = zi_storage_ptr,
     y = y, X = X, W = W,
     id_blocks = precomp$id_blocks,
-    eps = eps,
     nthreads = nthreads
   )
 
@@ -317,46 +316,6 @@ fit_bp_zi <- function(y, coords, X = NULL,
 
   par_hat <- decoded$par
   par_hat <- par_hat[all_names]
-
-  ## ============================================================
-  ## Compare objectives at estimated parameters
-  ## ============================================================
-
-  mu_hat <- if (p_beta == 1L) exp(unname(decoded$beta[1L])) else
-    exp(drop(X %*% decoded$beta))
-
-  pi_hat <- if (p_alpha == 1L) stats::plogis(unname(decoded$alpha[1L])) else
-    stats::plogis(drop(W %*% decoded$alpha))
-
-  marg_hat <- bp_zi_marginals(y, mu_hat, decoded$shape, pi_hat)
-
-  marg_blocks_hat <- lapply(precomp$id_blocks, function(idx) {
-    list(
-      pi = if (length(pi_hat) == 1L) pi_hat else pi_hat[idx],
-      a = if (length(marg_hat$a) == 1L) marg_hat$a else marg_hat$a[idx],
-      b = marg_hat$b[idx],
-      log1m_pi_h = marg_hat$log1m_pi_h[idx]
-    )
-  })
-
-  val_old_hat <- opt$value
-
-  val_new_hat <- bp_zi_marginals_ptr(
-    ptr_ = zi_storage_ptr,
-    marg_blocks = marg_blocks_hat,
-    range = decoded$range,
-    smooth = decoded$smooth,
-    eps = eps,
-    nthreads = nthreads
-  )
-
-  cat("\n===== OBJECTIVE AT ESTIMATED PARAMETERS =====\n")
-  cat("Original objective:", format(val_old_hat, digits = 16), "\n")
-  cat("New objective:     ", format(val_new_hat, digits = 16), "\n")
-  cat("Absolute difference:", abs(val_new_hat - val_old_hat), "\n")
-  cat("Relative difference:",
-      abs(val_new_hat - val_old_hat) / max(1, abs(val_old_hat)), "\n")
-  cat("============================================\n")
 
   beta_hat <- par_hat[beta_names]
   alpha_hat <- par_hat[alpha_names]
@@ -832,18 +791,6 @@ bp_zi_decode_opt_param <- function(par_opt,
 }
 
 
-bp_zi_make_cpp_param <- function(par_opt,
-                                 beta_names,
-                                 alpha_names) {
-
-  c(
-    log_shape = unname(par_opt["log_shape"]),
-    as.numeric(par_opt[beta_names]),
-    as.numeric(par_opt[alpha_names]),
-    log_range = unname(par_opt["log_range"]),
-    log_smooth = unname(par_opt["log_smooth"])
-  )
-}
 
 
 bp_zi_attach_designs <- function(precomp,
@@ -885,24 +832,10 @@ bp_zi_attach_designs <- function(precomp,
 make_objective_bcl_zi <- function(start_opt, free_names_opt,
                                   beta_names, alpha_names,
                                   zi_storage_ptr, y, X, W, id_blocks,
-                                  eps = 1e-12, nthreads = 0L) {
-
-  force(start_opt)
-  force(free_names_opt)
-  force(beta_names)
-  force(alpha_names)
-  force(zi_storage_ptr)
-  force(y)
-  force(X)
-  force(W)
-  force(id_blocks)
-  force(eps)
-  force(nthreads)
+                                  nthreads = 0L) {
 
   scalar_mu <- ncol(X) == 1L
   scalar_pi <- ncol(W) == 1L
-
-  checked <- 0L
 
   function(par_free_opt) {
 
@@ -921,98 +854,37 @@ make_objective_bcl_zi <- function(start_opt, free_names_opt,
     beta <- decoded$beta
     alpha <- decoded$alpha
 
-    if (!is.finite(shape) ||
-        !is.finite(range) ||
-        !is.finite(smooth) ||
-        shape <= 0 ||
-        range <= 0 ||
-        smooth <= 0 ||
-        any(!is.finite(beta)) ||
-        any(!is.finite(alpha))) {
-      return(1e10)
+    if (!is.finite(shape) || !is.finite(range) || !is.finite(smooth) ||
+        shape <= 0 || range <= 0 || smooth <= 0 ||
+        any(!is.finite(beta)) || any(!is.finite(alpha))) {
+      stop("Invalid parameters during optimization.")
     }
 
-    ## Marginal parameters
     mu <- if (scalar_mu) exp(unname(beta[1L])) else exp(drop(X %*% beta))
     pi <- if (scalar_pi) stats::plogis(unname(alpha[1L])) else
       stats::plogis(drop(W %*% alpha))
 
-    ## Original objective
-    par_cpp <- bp_zi_make_cpp_param(
-      par_opt = par_opt,
-      beta_names = beta_names,
-      alpha_names = alpha_names
-    )
+    marg <- bp_zi_marginals(y, mu, shape, pi)
 
-    val <- bp_zi_weibull_ptr(
+    marg_blocks <- lapply(id_blocks, function(idx) {
+      list(
+        pi = if (scalar_pi) pi else pi[idx],
+        a = if (scalar_pi) marg$a else marg$a[idx],
+        b = marg$b[idx],
+        log1m_pi_h = marg$log1m_pi_h[idx]
+      )
+    })
+
+    val <- bp_zi_marginals_ptr(
       ptr_ = zi_storage_ptr,
-      par = par_cpp,
-      has_X = TRUE,
-      has_W = TRUE,
-      eps = eps,
+      marg_blocks = marg_blocks,
+      range = range,
+      smooth = smooth,
       nthreads = nthreads
     )
 
-    if (!is.finite(val)) return(1e10)
-
-    ## Temporary comparison
-    if (checked < 20L && all(is.finite(pi), pi > 0, pi < 1) &&
-        all(is.finite(mu), mu > 0)) {
-
-      marg <- bp_zi_marginals(y, mu, shape, pi)
-
-      marg_blocks <- lapply(id_blocks, function(idx) {
-        list(
-          pi = if (scalar_pi) pi else pi[idx],
-          a = if (scalar_pi) marg$a else marg$a[idx],
-          b = marg$b[idx],
-          log1m_pi_h = marg$log1m_pi_h[idx]
-        )
-      })
-
-      stopifnot(identical(
-        as.integer(bp_zi_check_marginals_cpp(zi_storage_ptr, marg_blocks)),
-        as.integer(lengths(id_blocks))
-      ))
-
-      val_new <- bp_zi_marginals_ptr(
-        ptr_ = zi_storage_ptr,
-        marg_blocks = marg_blocks,
-        range = range,
-        smooth = smooth,
-        eps = eps,
-        nthreads = nthreads
-      )
-      if (!is.finite(val_new) ||
-          abs(val_new - val) > 1e-7 * max(1, abs(val))) {
-
-        pos <- which(y > 0)
-        mu_pos <- if (length(mu) == 1L) mu else mu[pos]
-        scale <- exp(log(mu_pos) - lgamma(1 + 1 / shape))
-
-        message("------ NUMERICAL DIAGNOSTIC ------")
-        message("shape: ", shape)
-        message("range: ", range)
-        message("mu: ", paste(range(mu), collapse = " / "))
-        message("pi: ", paste(range(pi), collapse = " / "))
-        message("scale: ", paste(range(scale), collapse = " / "))
-        message("Invalid scale: ", sum(!is.finite(scale) | scale <= 0))
-        message("Non-finite log-density: ",
-                sum(!is.finite(marg$log1m_pi_h[pos])))
-        message("Non-finite b: ", sum(!is.finite(marg$b[pos])))
-        message("Old objective: ", val)
-        message("New objective: ", val_new)
-      }
-
-
-      checked <<- checked + 1L
-
-      abs_diff <- abs(val_new - val)
-      rel_diff <- abs_diff / max(1, abs(val))
-
-      message("Evaluation ", checked,
-              " | Absolute difference: ", format(abs_diff, digits = 5),
-              " | Relative difference: ", format(rel_diff, digits = 5))
+    if (!is.finite(val)) {
+      stop("Non-finite BPL objective during optimization.")
     }
 
     val

@@ -19,8 +19,6 @@ bp_zi_marginals <- function(y, mu, shape, pi) {
     stop("y must be finite and nonnegative.")
   }
 
-  log1m_pi_h <- rep(NA_real_, length(y))
-
   pos <- which(y > 0)
 
   a <- stats::qnorm(pi)
