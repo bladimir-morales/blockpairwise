@@ -4,9 +4,6 @@
 #include <Rcpp.h>
 #include <RcppParallel.h>
 
-#include <boost/math/quadrature/gauss_kronrod.hpp>
-#include <boost/math/distributions/normal.hpp>
-
 #include <cmath>
 #include <algorithm>
 #include <vector>
@@ -15,60 +12,18 @@
 #include "bcl_zi_storage.h"
 #include "parallel_bcl_zi.h"
 #include "rho_matern.h"
+#include <R_ext/RS.h>
+
+extern "C" {
+  void F77_CALL(zibvn)(
+      const double* a1,
+      const double* a2,
+      const double* rho,
+      double* p
+  );
+}
 
 using namespace Rcpp;
-
-
-// ============================================================
-// Pure C++ utilities
-// ============================================================
-
-inline double clamp01_cpp(double u,
-                          const double eps = 1e-10) {
-
-  if (!std::isfinite(u)) return 0.5;
-  if (u < eps) return eps;
-  if (u > 1.0 - eps) return 1.0 - eps;
-
-  return u;
-}
-
-
-
-inline double pnorm_cpp(double x) {
-
-  return 0.5 * std::erfc(-x / std::sqrt(2.0));
-}
-
-
-inline double dnorm_cpp(double x) {
-
-  static const double inv_sqrt_2pi = 0.39894228040143267794;
-
-  return inv_sqrt_2pi * std::exp(-0.5 * x * x);
-}
-
-
-inline double qnorm_cpp(double u) {
-
-  u = clamp01_cpp(u);
-
-  try {
-
-    boost::math::normal_distribution<double> nd(0.0, 1.0);
-
-    return boost::math::quantile(nd, u);
-
-  } catch (...) {
-
-    if (u <= 0.0) return -37.0;
-    if (u >= 1.0) return 37.0;
-
-    return 0.0;
-  }
-}
-
-
 
 // ============================================================
 // Bivariate zero-zero probability
@@ -153,12 +108,9 @@ struct BCLZIMarginalContribution {
 
   double range;
   double smooth;
-  double eps;
 
-  BCLZIMarginalContribution(double range_,
-                            double smooth_,
-                            double eps_)
-    : range(range_), smooth(smooth_), eps(eps_) {
+  BCLZIMarginalContribution(double range_, double smooth_)
+    : range(range_), smooth(smooth_) {
 
     if (!std::isfinite(range) || range <= 0.0 ||
         !std::isfinite(smooth) || smooth <= 0.0) {
@@ -167,7 +119,6 @@ struct BCLZIMarginalContribution {
   }
 
   inline double operator()(double y1, double y2,
-                         double pi1, double pi2,
                          double a1, double a2,
                          double b1, double b2,
                          double L1, double L2,
@@ -216,21 +167,13 @@ struct BCLZIMarginalContribution {
 // [[Rcpp::export]]
 SEXP prepare_zi_storage_cpp(List y_list,
                             List pairs_list,
-                            List dist_list,
-                            Nullable<List> X_list = R_NilValue,
-                            Nullable<List> W_list = R_NilValue,
-                            bool has_X = false,
-                            bool has_W = false) {
+                            List dist_list) {
 
   BCLZIStoragePtr ptr(
       new BCLZIStorage(
           y_list,
           pairs_list,
-          dist_list,
-          X_list,
-          W_list,
-          has_X,
-          has_W
+          dist_list
       ),
       true
   );
@@ -248,14 +191,13 @@ double bp_zi_marginals_ptr(SEXP ptr_,
                            Rcpp::List marg_blocks,
                            double range,
                            double smooth,
-                           double eps = 1e-12,
                            int nthreads = 0) {
 
   BCLZIStoragePtr ptr(ptr_);
 
   BCLZIMarginals marg(marg_blocks, *ptr);
 
-  BCLZIMarginalContribution contrib(range, smooth, eps);
+  BCLZIMarginalContribution contrib(range, smooth);
 
   const double cl = parallel_zi_marginals_block_sum(
     *ptr, marg, contrib, nthreads

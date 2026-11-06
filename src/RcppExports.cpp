@@ -88,25 +88,21 @@ BEGIN_RCPP
 END_RCPP
 }
 // prepare_zi_storage_cpp
-SEXP prepare_zi_storage_cpp(List y_list, List pairs_list, List dist_list, Nullable<List> X_list, Nullable<List> W_list, bool has_X, bool has_W);
-RcppExport SEXP _blockpairwise_prepare_zi_storage_cpp(SEXP y_listSEXP, SEXP pairs_listSEXP, SEXP dist_listSEXP, SEXP X_listSEXP, SEXP W_listSEXP, SEXP has_XSEXP, SEXP has_WSEXP) {
+SEXP prepare_zi_storage_cpp(List y_list, List pairs_list, List dist_list);
+RcppExport SEXP _blockpairwise_prepare_zi_storage_cpp(SEXP y_listSEXP, SEXP pairs_listSEXP, SEXP dist_listSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< List >::type y_list(y_listSEXP);
     Rcpp::traits::input_parameter< List >::type pairs_list(pairs_listSEXP);
     Rcpp::traits::input_parameter< List >::type dist_list(dist_listSEXP);
-    Rcpp::traits::input_parameter< Nullable<List> >::type X_list(X_listSEXP);
-    Rcpp::traits::input_parameter< Nullable<List> >::type W_list(W_listSEXP);
-    Rcpp::traits::input_parameter< bool >::type has_X(has_XSEXP);
-    Rcpp::traits::input_parameter< bool >::type has_W(has_WSEXP);
-    rcpp_result_gen = Rcpp::wrap(prepare_zi_storage_cpp(y_list, pairs_list, dist_list, X_list, W_list, has_X, has_W));
+    rcpp_result_gen = Rcpp::wrap(prepare_zi_storage_cpp(y_list, pairs_list, dist_list));
     return rcpp_result_gen;
 END_RCPP
 }
 // bp_zi_marginals_ptr
-double bp_zi_marginals_ptr(SEXP ptr_, Rcpp::List marg_blocks, double range, double smooth, double eps, int nthreads);
-RcppExport SEXP _blockpairwise_bp_zi_marginals_ptr(SEXP ptr_SEXP, SEXP marg_blocksSEXP, SEXP rangeSEXP, SEXP smoothSEXP, SEXP epsSEXP, SEXP nthreadsSEXP) {
+double bp_zi_marginals_ptr(SEXP ptr_, Rcpp::List marg_blocks, double range, double smooth, int nthreads);
+RcppExport SEXP _blockpairwise_bp_zi_marginals_ptr(SEXP ptr_SEXP, SEXP marg_blocksSEXP, SEXP rangeSEXP, SEXP smoothSEXP, SEXP nthreadsSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -114,9 +110,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< Rcpp::List >::type marg_blocks(marg_blocksSEXP);
     Rcpp::traits::input_parameter< double >::type range(rangeSEXP);
     Rcpp::traits::input_parameter< double >::type smooth(smoothSEXP);
-    Rcpp::traits::input_parameter< double >::type eps(epsSEXP);
     Rcpp::traits::input_parameter< int >::type nthreads(nthreadsSEXP);
-    rcpp_result_gen = Rcpp::wrap(bp_zi_marginals_ptr(ptr_, marg_blocks, range, smooth, eps, nthreads));
+    rcpp_result_gen = Rcpp::wrap(bp_zi_marginals_ptr(ptr_, marg_blocks, range, smooth, nthreads));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -127,8 +122,8 @@ static const R_CallMethodDef CallEntries[] = {
     {"_blockpairwise_prepare_bcl_storage", (DL_FUNC) &_blockpairwise_prepare_bcl_storage, 4},
     {"_blockpairwise_bcl_gaussian_marginal_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_marginal_ptr, 8},
     {"_blockpairwise_bcl_gaussian_conditional_ptr", (DL_FUNC) &_blockpairwise_bcl_gaussian_conditional_ptr, 8},
-    {"_blockpairwise_prepare_zi_storage_cpp", (DL_FUNC) &_blockpairwise_prepare_zi_storage_cpp, 7},
-    {"_blockpairwise_bp_zi_marginals_ptr", (DL_FUNC) &_blockpairwise_bp_zi_marginals_ptr, 6},
+    {"_blockpairwise_prepare_zi_storage_cpp", (DL_FUNC) &_blockpairwise_prepare_zi_storage_cpp, 3},
+    {"_blockpairwise_bp_zi_marginals_ptr", (DL_FUNC) &_blockpairwise_bp_zi_marginals_ptr, 5},
     {NULL, NULL, 0}
 };
 

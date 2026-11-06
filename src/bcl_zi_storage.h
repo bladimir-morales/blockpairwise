@@ -9,12 +9,7 @@ struct BCLZIStorage {
 
   std::vector<std::vector<double>> y_list;
 
-  std::vector<std::vector<double>> X_list;
-  std::vector<std::vector<double>> W_list;
-
   std::vector<int> n_obs;
-  std::vector<int> p_mu;
-  std::vector<int> p_pi;
 
   std::vector<std::vector<int>> pair_i;
   std::vector<std::vector<int>> pair_j;
@@ -24,11 +19,7 @@ struct BCLZIStorage {
 
   BCLZIStorage(Rcpp::List y_list_R,
                Rcpp::List valid_pairs_list_R,
-               Rcpp::List dist_pairs_list_R,
-               Rcpp::Nullable<Rcpp::List> X_list_R = R_NilValue,
-               Rcpp::Nullable<Rcpp::List> W_list_R = R_NilValue,
-               bool has_X = false,
-               bool has_W = false) {
+               Rcpp::List dist_pairs_list_R) {
 
     nb = y_list_R.size();
 
@@ -40,33 +31,8 @@ struct BCLZIStorage {
       Rcpp::stop("dist_pairs_list_R must have the same length as y_list_R.");
     }
 
-    Rcpp::List Xs;
-    Rcpp::List Ws;
-
-    if (has_X) {
-      Xs = Rcpp::List(X_list_R);
-
-      if (Xs.size() != nb) {
-        Rcpp::stop("X_list_R must have the same length as y_list_R.");
-      }
-    }
-
-    if (has_W) {
-      Ws = Rcpp::List(W_list_R);
-
-      if (Ws.size() != nb) {
-        Rcpp::stop("W_list_R must have the same length as y_list_R.");
-      }
-    }
-
     y_list.reserve(nb);
-    X_list.reserve(nb);
-    W_list.reserve(nb);
-
     n_obs.reserve(nb);
-    p_mu.reserve(nb);
-    p_pi.reserve(nb);
-
     pair_i.reserve(nb);
     pair_j.reserve(nb);
     dist_pairs_list.reserve(nb);
@@ -94,61 +60,6 @@ struct BCLZIStorage {
       }
 
       std::vector<double> y_cpp(yb.begin(), yb.end());
-
-      int p_mu_b = 1;
-      int p_pi_b = 1;
-
-      std::vector<double> X_cpp;
-      std::vector<double> W_cpp;
-
-      if (has_X) {
-
-        Rcpp::NumericMatrix Xb =
-          Rcpp::as<Rcpp::NumericMatrix>(Xs[b]);
-
-        if (Xb.nrow() != nb_obs) {
-          Rcpp::stop("Each X matrix must have the same number of rows as y.");
-        }
-
-        p_mu_b = Xb.ncol();
-
-        if (p_mu_b <= 0) {
-          Rcpp::stop("X matrices must have at least one column.");
-        }
-
-        X_cpp.resize(nb_obs * p_mu_b);
-
-        for (int i = 0; i < nb_obs; ++i) {
-          for (int q = 0; q < p_mu_b; ++q) {
-            X_cpp[i * p_mu_b + q] = Xb(i, q);
-          }
-        }
-      }
-
-      if (has_W) {
-
-        Rcpp::NumericMatrix Wb =
-          Rcpp::as<Rcpp::NumericMatrix>(Ws[b]);
-
-        if (Wb.nrow() != nb_obs) {
-          Rcpp::stop("Each W matrix must have the same number of rows as y.");
-        }
-
-        p_pi_b = Wb.ncol();
-
-        if (p_pi_b <= 0) {
-          Rcpp::stop("W matrices must have at least one column.");
-        }
-
-        W_cpp.resize(nb_obs * p_pi_b);
-
-        for (int i = 0; i < nb_obs; ++i) {
-          for (int q = 0; q < p_pi_b; ++q) {
-            W_cpp[i * p_pi_b + q] = Wb(i, q);
-          }
-        }
-      }
-
       std::vector<int> pi_cpp(n_pairs);
       std::vector<int> pj_cpp(n_pairs);
       std::vector<double> dist_cpp(dist_b.begin(), dist_b.end());
@@ -158,7 +69,8 @@ struct BCLZIStorage {
         int i1 = pairs_b(l, 0) - 1;
         int i2 = pairs_b(l, 1) - 1;
 
-        if (i1 < 0 || i1 >= nb_obs || i2 < 0 || i2 >= nb_obs) {
+        if (i1 < 0 || i1 >= nb_obs ||
+            i2 < 0 || i2 >= nb_obs) {
           Rcpp::stop("Pair index out of bounds.");
         }
 
@@ -167,13 +79,7 @@ struct BCLZIStorage {
       }
 
       y_list.push_back(std::move(y_cpp));
-      X_list.push_back(std::move(X_cpp));
-      W_list.push_back(std::move(W_cpp));
-
       n_obs.push_back(nb_obs);
-      p_mu.push_back(p_mu_b);
-      p_pi.push_back(p_pi_b);
-
       pair_i.push_back(std::move(pi_cpp));
       pair_j.push_back(std::move(pj_cpp));
       dist_pairs_list.push_back(std::move(dist_cpp));
@@ -184,7 +90,6 @@ struct BCLZIStorage {
 
 struct BCLZIMarginals {
 
-  std::vector<std::vector<double>> pi;
   std::vector<std::vector<double>> a;
   std::vector<std::vector<double>> b;
   std::vector<std::vector<double>> log1m_pi_h;
@@ -196,7 +101,6 @@ struct BCLZIMarginals {
       Rcpp::stop("Number of marginal blocks does not match storage.");
     }
 
-    pi.resize(storage.nb);
     a.resize(storage.nb);
     b.resize(storage.nb);
     log1m_pi_h.resize(storage.nb);
@@ -205,7 +109,6 @@ struct BCLZIMarginals {
 
       Rcpp::List marg = marg_blocks[k];
 
-      pi[k] = Rcpp::as<std::vector<double>>(marg["pi"]);
       a[k] = Rcpp::as<std::vector<double>>(marg["a"]);
       b[k] = Rcpp::as<std::vector<double>>(marg["b"]);
       log1m_pi_h[k] =
@@ -213,8 +116,7 @@ struct BCLZIMarginals {
 
       const int n = storage.n_obs[k];
 
-      if ((pi[k].size() != 1 && pi[k].size() != n) ||
-          (a[k].size() != 1 && a[k].size() != n) ||
+      if ((a[k].size() != 1 && a[k].size() != n) ||
           b[k].size() != n ||
           log1m_pi_h[k].size() != n) {
         Rcpp::stop("Invalid marginal dimensions in block.");

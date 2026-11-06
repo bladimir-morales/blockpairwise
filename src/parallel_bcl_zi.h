@@ -46,7 +46,6 @@ inline double eval_block_pairwise_zi_marginals_sum(
   const auto& pair_j = storage.pair_j[k];
   const auto& dist = storage.dist_pairs_list[k];
 
-  const auto& pik = marg.pi[k];
   const auto& ak = marg.a[k];
   const auto& bk = marg.b[k];
   const auto& Lk = marg.log1m_pi_h[k];
@@ -58,19 +57,11 @@ inline double eval_block_pairwise_zi_marginals_sum(
     const std::size_t i = static_cast<std::size_t>(pair_i[l]);
     const std::size_t j = static_cast<std::size_t>(pair_j[l]);
 
-    const double pi_i = pik.size() == 1 ? pik[0] : pik[i];
-    const double pi_j = pik.size() == 1 ? pik[0] : pik[j];
-
     const double a_i = ak.size() == 1 ? ak[0] : ak[i];
     const double a_j = ak.size() == 1 ? ak[0] : ak[j];
 
-    local += contrib(
-      yk[i], yk[j],
-               pi_i, pi_j,
-               a_i, a_j,
-               bk[i], bk[j],
-                        Lk[i], Lk[j],
-                                 dist[l]
+    local += contrib(yk[i], yk[j], a_i, a_j,
+                     bk[i], bk[j], Lk[i], Lk[j], dist[l]
     );
   }
 

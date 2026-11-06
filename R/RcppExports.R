@@ -21,11 +21,11 @@ bcl_gaussian_conditional_ptr <- function(ptr_, beta, sill, range, t, t2, smooth,
     .Call(`_blockpairwise_bcl_gaussian_conditional_ptr`, ptr_, beta, sill, range, t, t2, smooth, nthreads)
 }
 
-prepare_zi_storage_cpp <- function(y_list, pairs_list, dist_list, X_list = NULL, W_list = NULL, has_X = FALSE, has_W = FALSE) {
-    .Call(`_blockpairwise_prepare_zi_storage_cpp`, y_list, pairs_list, dist_list, X_list, W_list, has_X, has_W)
+prepare_zi_storage_cpp <- function(y_list, pairs_list, dist_list) {
+    .Call(`_blockpairwise_prepare_zi_storage_cpp`, y_list, pairs_list, dist_list)
 }
 
-bp_zi_marginals_ptr <- function(ptr_, marg_blocks, range, smooth, eps = 1e-12, nthreads = 0L) {
-    .Call(`_blockpairwise_bp_zi_marginals_ptr`, ptr_, marg_blocks, range, smooth, eps, nthreads)
+bp_zi_marginals_ptr <- function(ptr_, marg_blocks, range, smooth, nthreads = 0L) {
+    .Call(`_blockpairwise_bp_zi_marginals_ptr`, ptr_, marg_blocks, range, smooth, nthreads)
 }
 

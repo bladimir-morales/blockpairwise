@@ -21,7 +21,6 @@
 #' @param precomp optional object created by prepare_bcl_data().
 #' @param lower lower bounds in optimization scale.
 #' @param upper upper bounds in optimization scale.
-#' @param eps numerical lower bound for pairwise contributions.
 #' @param nthreads optional number of C++ threads used in the block-pairwise
 #'   likelihood evaluation. If NULL, the backend chooses automatically.
 #' @param control list passed to stats::optim().
@@ -45,7 +44,6 @@ fit_bp_zi <- function(y, coords, X = NULL,
                       precomp = NULL,
                       lower = NULL,
                       upper = NULL,
-                      eps = 1e-12,
                       nthreads = NULL,
                       control = list(),
                       ...) {
@@ -246,20 +244,10 @@ fit_bp_zi <- function(y, coords, X = NULL,
     }
   }
 
-  precomp <- bp_zi_attach_designs(
-    precomp = precomp,
-    X = X,
-    W = W
-  )
-
   zi_storage_ptr <- prepare_zi_storage_cpp(
     y_list = precomp$yk,
     pairs_list = precomp$valid_pairs,
-    dist_list = precomp$dist_pairs,
-    X_list = precomp$Xk,
-    W_list = precomp$Wk,
-    has_X = TRUE,
-    has_W = TRUE
+    dist_list = precomp$dist_pairs
   )
 
   # 9. Objective function ----
@@ -409,8 +397,6 @@ fit_bp_zi <- function(y, coords, X = NULL,
     fweight = fweight,
     nnk = nnk,
     w = w,
-
-    eps = eps,
 
     time = time_fit[1:3],
     opt = opt,
@@ -791,44 +777,6 @@ bp_zi_decode_opt_param <- function(par_opt,
 }
 
 
-
-
-bp_zi_attach_designs <- function(precomp,
-                                 X,
-                                 W) {
-
-  if (is.null(precomp$groups)) {
-    stop("precomp must contain groups.", call. = FALSE)
-  }
-
-  groups <- precomp$groups
-
-  if (!is.factor(groups)) {
-    groups <- factor(groups)
-  }
-
-  block_ids <- levels(groups)
-
-  Xk <- vector("list", length(block_ids))
-  Wk <- vector("list", length(block_ids))
-
-  names(Xk) <- block_ids
-  names(Wk) <- block_ids
-
-  for (b in block_ids) {
-    ind <- which(groups == b)
-
-    Xk[[b]] <- X[ind, , drop = FALSE]
-    Wk[[b]] <- W[ind, , drop = FALSE]
-  }
-
-  precomp$Xk <- Xk
-  precomp$Wk <- Wk
-
-  precomp
-}
-
-
 make_objective_bcl_zi <- function(start_opt, free_names_opt,
                                   beta_names, alpha_names,
                                   zi_storage_ptr, y, X, W, id_blocks,
@@ -868,7 +816,6 @@ make_objective_bcl_zi <- function(start_opt, free_names_opt,
 
     marg_blocks <- lapply(id_blocks, function(idx) {
       list(
-        pi = if (scalar_pi) pi else pi[idx],
         a = if (scalar_pi) marg$a else marg$a[idx],
         b = marg$b[idx],
         log1m_pi_h = marg$log1m_pi_h[idx]
