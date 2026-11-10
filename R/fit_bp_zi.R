@@ -703,10 +703,9 @@ make_objective_bcl_zi <- function(start_opt, free_names_opt,
     }
 
     mu <- if (scalar_mu) exp(unname(beta[1L])) else exp(drop(X %*% beta))
-    pi <- if (scalar_pi) stats::plogis(unname(alpha[1L])) else
-      stats::plogis(drop(W %*% alpha))
+    eta_pi <- if (scalar_pi) unname(alpha[1L]) else drop(W %*% alpha)
 
-    marg <- bp_zi_marginals(y, mu, shape, pi)
+    marg <- bp_zi_marginals(y, mu, shape, eta_pi)
 
     marg_blocks <- lapply(id_blocks, function(idx) {
       list(

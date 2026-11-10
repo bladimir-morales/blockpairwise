@@ -96,8 +96,7 @@ inline double log_c_gauss_zi_cpp(double b1, double b2, double rho) {
   const double den = (1.0 - rho) * (1.0 + rho);
 
   return -0.5 * std::log(den) +
-    (rho * b1 * b2 -
-    0.5 * rho * rho * (b1 * b1 + b2 * b2)) / den;
+    (rho * b1 * b2 - 0.5 * rho * rho * (b1 * b1 + b2 * b2)) / den;
 }
 
 // ============================================================
